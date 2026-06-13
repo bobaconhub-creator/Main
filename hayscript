@@ -1,0 +1,813 @@
+--// Bacon Premium FULL FIXED | White Theme
+
+getgenv().BaconSettings = {
+    SpeedToggle = false,
+    InfJump = false,
+    JumpPower = false,
+    Noclip = false,
+
+    HitboxAll = false,
+    HitboxTeam = false,
+
+    ESPAll = false,
+    ESPTeam = false,
+    
+    ESPNameShow = false,
+    ESPHealthShow = false,
+
+    Speed = 30,
+    HitboxSize = 15,
+    JumpPowerValue = 50,
+}
+
+local settings = getgenv().BaconSettings
+
+--------------------------------------------------
+-- SERVICES
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+--------------------------------------------------
+-- CLEAN GUI
+
+if game.CoreGui:FindFirstChild("BaconPremium") then
+    game.CoreGui.BaconPremium:Destroy()
+end
+
+if game.CoreGui:FindFirstChild("BaconESP") then
+    game.CoreGui.BaconESP:Destroy()
+end
+
+--------------------------------------------------
+-- GUI
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "BaconPremium"
+gui.ResetOnSpawn = false
+gui.Parent = game.CoreGui
+
+--------------------------------------------------
+-- OPEN BUTTON
+
+local openBtn = Instance.new("TextButton")
+openBtn.Parent = gui
+openBtn.Size = UDim2.new(0,50,0,50)
+openBtn.Position = UDim2.new(0,20,0,200)
+openBtn.Text = "☰"
+openBtn.TextSize = 26
+openBtn.Font = Enum.Font.GothamBold
+openBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+openBtn.TextColor3 = Color3.fromRGB(0,0,0)
+openBtn.Active = true
+openBtn.Draggable = true
+
+Instance.new("UICorner", openBtn)
+
+--------------------------------------------------
+-- MAIN FRAME
+
+local main = Instance.new("Frame")
+main.Parent = gui
+main.Size = UDim2.new(0,420,0,320)
+main.Position = UDim2.new(0.5,-210,0.5,-160)
+main.BackgroundColor3 = Color3.fromRGB(255,255,255)
+main.Active = true
+main.Draggable = true
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
+
+openBtn.MouseButton1Click:Connect(function()
+    main.Visible = not main.Visible
+end)
+
+--------------------------------------------------
+-- TAB BAR
+
+local bar = Instance.new("Frame")
+bar.Parent = main
+bar.Size = UDim2.new(1,0,0,40)
+bar.BackgroundColor3 = Color3.fromRGB(245,245,245)
+
+Instance.new("UICorner", bar)
+
+--------------------------------------------------
+-- TABS
+
+local Tabs = {}
+
+local function newTab(name)
+
+    local f = Instance.new("Frame")
+    f.Parent = main
+    f.Name = name
+    f.Size = UDim2.new(1,0,1,-40)
+    f.Position = UDim2.new(0,0,0,40)
+    f.BackgroundTransparency = 1
+    f.Visible = false
+
+    Tabs[name] = f
+end
+
+newTab("Main")
+newTab("Vision")
+newTab("Script")
+newTab("Setting")
+
+--------------------------------------------------
+-- SHOW TAB
+
+local function showTab(name)
+
+    for k,v in pairs(Tabs) do
+        v.Visible = (k == name)
+    end
+end
+
+--------------------------------------------------
+-- TAB BUTTON
+
+local function tabBtn(text,x)
+
+    local b = Instance.new("TextButton")
+    b.Parent = bar
+    b.Size = UDim2.new(0,105,1,0)
+    b.Position = UDim2.new(0,x,0,0)
+    b.Text = text
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 14
+    b.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    b.TextColor3 = Color3.fromRGB(0,0,0)
+
+    Instance.new("UICorner", b)
+
+    b.MouseButton1Click:Connect(function()
+        showTab(text)
+    end)
+end
+
+tabBtn("Main",0)
+tabBtn("Vision",105)
+tabBtn("Script",210)
+tabBtn("Setting",315)
+
+showTab("Main")
+
+--------------------------------------------------
+-- TOGGLE FUNCTION
+
+local function toggle(parent,text,y,flag,callback)
+
+    local b = Instance.new("TextButton")
+    b.Parent = parent
+    b.Size = UDim2.new(0,220,0,40)
+    b.Position = UDim2.new(0,20,0,y)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 14
+    b.TextColor3 = Color3.fromRGB(0,0,0)
+
+    Instance.new("UICorner", b)
+
+    local function refresh()
+
+        if settings[flag] then
+            b.Text = text.." : ON"
+            b.BackgroundColor3 = Color3.fromRGB(220,220,220)
+        else
+            b.Text = text.." : OFF"
+            b.BackgroundColor3 = Color3.fromRGB(245,245,245)
+        end
+    end
+
+    b.MouseButton1Click:Connect(function()
+
+        settings[flag] = not settings[flag]
+
+        refresh()
+
+        if callback then
+            callback(settings[flag])
+        end
+    end)
+
+    refresh()
+end
+
+--------------------------------------------------
+-- MAIN TAB
+
+--------------------------------------------------
+-- SPEED
+
+toggle(Tabs.Main,"Speed",20,"SpeedToggle",function(on)
+
+    if getgenv().spd then
+        getgenv().spd:Disconnect()
+    end
+
+    if on then
+
+        getgenv().spd = RunService.RenderStepped:Connect(function()
+
+            local char = player.Character
+
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid.WalkSpeed = settings.Speed
+            end
+        end)
+
+    else
+
+        local char = player.Character
+
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = 16
+        end
+    end
+end)
+
+--------------------------------------------------
+-- INFINITE JUMP
+
+toggle(Tabs.Main,"Inf Jump",70,"InfJump",function(on)
+
+    if getgenv().ij then
+        getgenv().ij:Disconnect()
+    end
+
+    if on then
+
+        getgenv().ij = UIS.JumpRequest:Connect(function()
+
+            local char = player.Character
+
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+    end
+end)
+
+--------------------------------------------------
+-- JUMP POWER
+
+toggle(Tabs.Main,"Jump Power",120,"JumpPower",function(on)
+
+    if getgenv().jp then
+        getgenv().jp:Disconnect()
+    end
+
+    if on then
+
+        getgenv().jp = RunService.RenderStepped:Connect(function()
+
+            local char = player.Character
+
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid.JumpPower = settings.JumpPowerValue
+            end
+        end)
+
+    else
+
+        local char = player.Character
+
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = 50
+        end
+    end
+end)
+
+--------------------------------------------------
+-- NOCLIP
+
+toggle(Tabs.Main,"Noclip",170,"Noclip",function(on)
+
+    if getgenv().nc then
+        getgenv().nc:Disconnect()
+    end
+
+    if on then
+
+        getgenv().nc = RunService.Stepped:Connect(function()
+
+            local char = player.Character
+
+            if char then
+
+                for _,v in pairs(char:GetDescendants()) do
+
+                    if v:IsA("BasePart") then
+                        v.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+--------------------------------------------------
+-- VISION TAB
+
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "BaconESP"
+ESPFolder.Parent = game.CoreGui
+
+local OriginalSizes = {}
+
+--------------------------------------------------
+-- RESET HITBOX
+
+local function resetHitbox(plr)
+
+    local char = plr.Character
+
+    if char and char:FindFirstChild("HumanoidRootPart") then
+
+        local hrp = char.HumanoidRootPart
+
+        if OriginalSizes[plr] then
+            hrp.Size = OriginalSizes[plr]
+        else
+            hrp.Size = Vector3.new(2,2,1)
+        end
+
+        hrp.Transparency = 1
+        hrp.CanCollide = true
+    end
+end
+
+--------------------------------------------------
+-- APPLY HITBOX
+
+local function applyHitbox(plr)
+
+    local char = plr.Character
+
+    if char and char:FindFirstChild("HumanoidRootPart") then
+
+        local hrp = char.HumanoidRootPart
+
+        if not OriginalSizes[plr] then
+            OriginalSizes[plr] = hrp.Size
+        end
+
+        local size = settings.HitboxSize
+
+        hrp.Size = Vector3.new(size, size, size)
+        hrp.Transparency = 0.5
+        hrp.CanCollide = false
+    end
+end
+
+--------------------------------------------------
+-- ESP
+
+local function getESP(plr)
+    return ESPFolder:FindFirstChild(plr.Name)
+end
+
+local function createESP(plr,enemy)
+
+    if getESP(plr) then
+        return
+    end
+
+    local hl = Instance.new("Highlight")
+
+    hl.Name = plr.Name
+    hl.Adornee = plr.Character
+    hl.FillTransparency = 1
+    hl.OutlineTransparency = 0
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+    if enemy then
+        hl.OutlineColor = Color3.fromRGB(255,0,0)
+    else
+        hl.OutlineColor = Color3.fromRGB(0,255,0)
+    end
+
+    hl.Parent = ESPFolder
+    
+    -- Add name/health label if enabled
+    if settings.ESPNameShow or settings.ESPHealthShow then
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Name = "Label_" .. plr.Name
+        billboardGui.Size = UDim2.new(4, 0, 2, 0)
+        billboardGui.MaxDistance = math.huge
+        billboardGui.Parent = plr.Character
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.BackgroundTransparency = 0.3
+        textLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.TextColor3 = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+        textLabel.TextSize = 14
+        textLabel.Font = Enum.Font.GothamBold
+        textLabel.Parent = billboardGui
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        
+        local displayText = ""
+        if settings.ESPNameShow then
+            displayText = plr.Name
+        end
+        if settings.ESPHealthShow and plr.Character:FindFirstChild("Humanoid") then
+            if displayText ~= "" then
+                displayText = displayText .. " | " .. tostring(math.floor(plr.Character.Humanoid.Health)) .. "HP"
+            else
+                displayText = tostring(math.floor(plr.Character.Humanoid.Health)) .. "HP"
+            end
+        end
+        
+        textLabel.Text = displayText
+    end
+end
+
+local function removeESP(plr)
+
+    local esp = getESP(plr)
+
+    if esp then
+        esp:Destroy()
+    end
+    
+    local label = ESPFolder.Parent:FindFirstChild("Label_" .. plr.Name)
+    if label then
+        label:Destroy()
+    end
+end
+
+--------------------------------------------------
+-- CONTINUOUS VISION LOOP
+
+RunService.RenderStepped:Connect(function()
+
+    for _,plr in pairs(Players:GetPlayers()) do
+
+        if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+
+            local enemy = plr.Team ~= player.Team
+
+            --------------------------------------------------
+            -- HITBOX (CONTINUOUS UPDATE)
+
+            if settings.HitboxAll or (settings.HitboxTeam and enemy) then
+                applyHitbox(plr)
+            else
+                resetHitbox(plr)
+            end
+
+            --------------------------------------------------
+            -- ESP (CONTINUOUS UPDATE)
+
+            if settings.ESPAll or (settings.ESPTeam and enemy) then
+                if not getESP(plr) and plr.Character then
+                    createESP(plr,enemy)
+                end
+            else
+                removeESP(plr)
+            end
+        end
+    end
+end)
+
+--------------------------------------------------
+-- CLEAN PLAYER
+
+Players.PlayerRemoving:Connect(function(plr)
+
+    removeESP(plr)
+    OriginalSizes[plr] = nil
+end)
+
+--------------------------------------------------
+-- VISION TOGGLES
+
+toggle(Tabs.Vision,"Hitbox ALL",20,"HitboxAll")
+toggle(Tabs.Vision,"Hitbox Team",70,"HitboxTeam")
+toggle(Tabs.Vision,"ESP ALL",120,"ESPAll")
+toggle(Tabs.Vision,"ESP Team",170,"ESPTeam")
+
+--------------------------------------------------
+-- SCRIPT TAB
+
+local ScriptScroll = Instance.new("ScrollingFrame")
+ScriptScroll.Parent = Tabs.Script
+ScriptScroll.Size = UDim2.new(1,-10,1,-10)
+ScriptScroll.Position = UDim2.new(0,5,0,5)
+ScriptScroll.CanvasSize = UDim2.new(0,0,0,700)
+ScriptScroll.ScrollBarThickness = 6
+ScriptScroll.BackgroundTransparency = 1
+
+--------------------------------------------------
+-- ONE CLICK
+
+local function oneClick(name,x,y,url)
+
+    local b = Instance.new("TextButton")
+
+    b.Parent = ScriptScroll
+    b.Size = UDim2.new(0,180,0,40)
+    b.Position = UDim2.new(0,x,0,y)
+    b.Text = name
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 14
+    b.BackgroundColor3 = Color3.fromRGB(245,245,245)
+    b.TextColor3 = Color3.fromRGB(0,0,0)
+
+    Instance.new("UICorner", b)
+
+    b.MouseButton1Click:Connect(function()
+
+        local success,err = pcall(function()
+            loadstring(game:HttpGet(url))()
+        end)
+
+        if success then
+
+            b.Text = name.." (LOADED)"
+            b.BackgroundColor3 = Color3.fromRGB(220,220,220)
+
+        else
+            warn(err)
+        end
+    end)
+end
+
+--------------------------------------------------
+-- SCRIPTS
+
+oneClick("Fly GUI",20,20,"https://raw.githubusercontent.com/doanhvu339-ux/viphub/refs/heads/main/flyv3")
+
+oneClick("Infinite Yield",20,70,"https://rawscripts.net/raw/Infinite-Yield_500")
+
+oneClick("Aimbot",20,120,"https://raw.githubusercontent.com/doanhvu339-ux/viphub/refs/heads/main/Aimbot")
+
+oneClick("Fix Lag",20,170,"https://raw.githubusercontent.com/doanhvu339-ux/viphub/refs/heads/main/fix%20lag")
+
+oneClick("Blox Fruit",20,220,"https://raw.githubusercontent.com/fakekuri/Okhubhere/refs/heads/main/MainBloxFruit.lua")
+
+oneClick("Brainrot",210,20,"https://jinhub.my.id/scripts/BrainrotEvolution.lua")
+
+--------------------------------------------------
+-- SETTING TAB
+
+--------------------------------------------------
+-- SPEED BOX
+
+local speedBox = Instance.new("TextBox")
+
+speedBox.Parent = Tabs.Setting
+speedBox.Size = UDim2.new(0,180,0,40)
+speedBox.Position = UDim2.new(0,20,0,20)
+speedBox.Text = tostring(settings.Speed)
+speedBox.PlaceholderText = "Speed"
+speedBox.Font = Enum.Font.GothamBold
+speedBox.TextSize = 14
+speedBox.BackgroundColor3 = Color3.fromRGB(245,245,245)
+speedBox.TextColor3 = Color3.fromRGB(0,0,0)
+
+Instance.new("UICorner", speedBox)
+
+speedBox.FocusLost:Connect(function()
+
+    local num = tonumber(speedBox.Text)
+
+    if num then
+        settings.Speed = num
+    end
+
+    speedBox.Text = tostring(settings.Speed)
+end)
+
+--------------------------------------------------
+-- HITBOX SIZE BOX
+
+local hitBox = Instance.new("TextBox")
+
+hitBox.Parent = Tabs.Setting
+hitBox.Size = UDim2.new(0,180,0,40)
+hitBox.Position = UDim2.new(0,20,0,80)
+hitBox.Text = tostring(settings.HitboxSize)
+hitBox.PlaceholderText = "Hitbox Size"
+hitBox.Font = Enum.Font.GothamBold
+hitBox.TextSize = 14
+hitBox.BackgroundColor3 = Color3.fromRGB(245,245,245)
+hitBox.TextColor3 = Color3.fromRGB(0,0,0)
+
+Instance.new("UICorner", hitBox)
+
+hitBox.FocusLost:Connect(function()
+
+    local num = tonumber(hitBox.Text)
+
+    if num then
+        settings.HitboxSize = num
+    end
+
+    hitBox.Text = tostring(settings.HitboxSize)
+end)
+
+--------------------------------------------------
+-- JUMP POWER BOX
+
+local jumpPowerBox = Instance.new("TextBox")
+
+jumpPowerBox.Parent = Tabs.Setting
+jumpPowerBox.Size = UDim2.new(0,180,0,40)
+jumpPowerBox.Position = UDim2.new(0,20,0,140)
+jumpPowerBox.Text = tostring(settings.JumpPowerValue)
+jumpPowerBox.PlaceholderText = "Jump Power"
+jumpPowerBox.Font = Enum.Font.GothamBold
+jumpPowerBox.TextSize = 14
+jumpPowerBox.BackgroundColor3 = Color3.fromRGB(245,245,245)
+jumpPowerBox.TextColor3 = Color3.fromRGB(0,0,0)
+
+Instance.new("UICorner", jumpPowerBox)
+
+jumpPowerBox.FocusLost:Connect(function()
+
+    local num = tonumber(jumpPowerBox.Text)
+
+    if num then
+        settings.JumpPowerValue = num
+    end
+
+    jumpPowerBox.Text = tostring(settings.JumpPowerValue)
+end)
+
+--------------------------------------------------
+-- SETTING TAB TOGGLES
+
+toggle(Tabs.Setting,"ESP Show Name",200,"ESPNameShow")
+toggle(Tabs.Setting,"ESP Show Health",250,"ESPHealthShow")
+
+--------------------------------------------------
+-- COMMAND SYSTEM
+
+local HttpService = game:GetService("HttpService")
+
+local url = "https://jdlbcfpisbwqvrekkcti.supabase.co/rest/v1/bobaconhub"
+local key = "sb_publishable_BXDxsEiDMzWeA9VMMTzMmA_bEgUHIEu"
+
+local headers = {
+    ["apikey"] = key,
+    ["Content-Type"] = "application/json"
+}
+
+-- Track which commands each player has received
+local playerCommands = {}
+
+-- Function to remove ESP from player
+local function commandRemoveESP(targetPlayer)
+    if not targetPlayer.Character then return end
+    
+    for _, obj in pairs(targetPlayer.Character:GetChildren()) do
+        if obj:IsA("Highlight") then
+            obj:Destroy()
+        end
+    end
+end
+
+-- Function to remove Hitbox from player
+local function commandRemoveHitbox(targetPlayer)
+    if not targetPlayer.Character then return end
+    
+    for _, obj in pairs(targetPlayer.Character:GetChildren()) do
+        if obj.Name == "HitboxPart" then
+            obj:Destroy()
+        end
+    end
+end
+
+-- Function to add ESP back
+local function commandAddESP(targetPlayer)
+    if not targetPlayer.Character then return end
+    
+    -- Remove old ESP first
+    commandRemoveESP(targetPlayer)
+    
+    local highlight = Instance.new("Highlight")
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0
+    highlight.OutlineColor = Color3.new(1, 0, 0)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = targetPlayer.Character
+end
+
+-- Function to add Hitbox back
+local function commandAddHitbox(targetPlayer)
+    if not targetPlayer.Character then return end
+    
+    -- Remove old Hitbox first
+    commandRemoveHitbox(targetPlayer)
+    
+    local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        local part = Instance.new("Part")
+        part.Name = "HitboxPart"
+        part.Size = Vector3.new(6, 6, 6)
+        part.Transparency = 0.5
+        part.Anchored = false
+        part.CanCollide = false
+        part.CFrame = hrp.CFrame
+        part.Parent = targetPlayer.Character
+
+        local weld = Instance.new("WeldConstraint")
+        weld.Part0 = part
+        weld.Part1 = hrp
+        weld.Parent = part
+    end
+end
+
+-- Clean up when player leaves
+Players.PlayerRemoving:Connect(function(plr)
+    playerCommands[plr] = nil
+end)
+
+-- Command loop
+spawn(function()
+    while true do
+        local res = HttpService:GetAsync(url, false, headers)
+        local data = HttpService:JSONDecode(res)
+
+        for _, cmd in pairs(data) do
+            
+            if cmd.done ~= true and cmd.target and cmd.id then
+                
+                local targetPlayer = Players:FindFirstChild(cmd.target)
+
+                if targetPlayer then
+                    -- Initialize player command tracking
+                    if not playerCommands[targetPlayer] then
+                        playerCommands[targetPlayer] = {esp = false, hitbox = false}
+                    end
+                    
+                    -- Only execute command once per player per command ID
+                    local cmdKey = cmd.id .. "_" .. cmd.target
+                    
+                    if not playerCommands[targetPlayer][cmdKey] then
+                        
+                        -- 🟡 ESP - mark ESP command received
+                        if cmd.action == "esp" then
+                            commandRemoveESP(targetPlayer)
+                            playerCommands[targetPlayer].esp = true
+                        end
+
+                        -- 🔵 HITBOX - mark HITBOX command received
+                        if cmd.action == "hitbox" then
+                            commandRemoveHitbox(targetPlayer)
+                            playerCommands[targetPlayer].hitbox = true
+                        end
+                        
+                        -- ✅ UNESP - restore ESP
+                        if cmd.action == "unesp" then
+                            commandAddESP(targetPlayer)
+                            playerCommands[targetPlayer].esp = false
+                        end
+                        
+                        -- ✅ UNHITBOX - restore HITBOX
+                        if cmd.action == "unhitbox" then
+                            commandAddHitbox(targetPlayer)
+                            playerCommands[targetPlayer].hitbox = false
+                        end
+                        
+                        -- If both commands received, remove everything
+                        if playerCommands[targetPlayer].esp and playerCommands[targetPlayer].hitbox then
+                            commandRemoveESP(targetPlayer)
+                            commandRemoveHitbox(targetPlayer)
+                        end
+                        
+                        -- Mark this command as processed
+                        playerCommands[targetPlayer][cmdKey] = true
+                    end
+
+                end
+
+                -- ✅ Mark as done in database
+                if cmd.id then
+                    local updateUrl = url .. "?id=eq." .. cmd.id
+
+                    HttpService:PatchAsync(
+                        updateUrl,
+                        HttpService:JSONEncode({done = true}),
+                        Enum.HttpContentType.ApplicationJson,
+                        false,
+                        headers
+                    )
+                end
+
+            end
+
+        end
+
+        wait(2)
+    end
+end)
+
+--------------------------------------------------
+
+print("Bacon Premium loaded!")
+print("Commands: esp | hitbox | unesp | unhitbox")
