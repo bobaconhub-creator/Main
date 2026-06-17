@@ -1,0 +1,134 @@
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FPSBoostGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0, 90, 0, 90)
+Button.Position = UDim2.new(0, 20, 0, 100)
+Button.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+Button.Text = "FPS OFF"
+Button.TextColor3 = Color3.new(1,1,1)
+Button.TextScaled = true
+Button.Parent = ScreenGui
+
+-- Drag mobile + PC
+local dragging = false
+local dragStart
+local startPos
+
+Button.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Button.Position
+	end
+end)
+
+Button.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if dragging and (
+		input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch
+	) then
+		local delta = input.Position - dragStart
+		Button.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+local Enabled = false
+local Saved = {}
+
+local function EnableBoost()
+	Lighting.GlobalShadows = false
+	Lighting.FogEnd = 100000
+	Lighting.Brightness = 1
+
+	for _,v in ipairs(workspace:GetDescendants()) do
+
+		if v:IsA("ParticleEmitter")
+		or v:IsA("Trail")
+		or v:IsA("Smoke")
+		or v:IsA("Fire")
+		or v:IsA("Sparkles") then
+			Saved[v] = v.Enabled
+			v.Enabled = false
+		end
+
+		if v:IsA("Decal") or v:IsA("Texture") then
+			Saved[v] = v.Transparency
+			v.Transparency = 1
+		end
+
+		if v:IsA("BasePart") then
+			Saved[v] = {
+				Material = v.Material,
+				Reflectance = v.Reflectance
+			}
+
+			v.Material = Enum.Material.Plastic
+			v.Reflectance = 0
+
+			-- Không sửa CanCollide
+		end
+	end
+end
+
+local function DisableBoost()
+	for obj,data in pairs(Saved) do
+		if obj and obj.Parent then
+
+			if obj:IsA("ParticleEmitter")
+			or obj:IsA("Trail")
+			or obj:IsA("Smoke")
+			or obj:IsA("Fire")
+			or obj:IsA("Sparkles") then
+				obj.Enabled = data
+
+			elseif obj:IsA("Decal")
+			or obj:IsA("Texture") then
+				obj.Transparency = data
+
+			elseif obj:IsA("BasePart") then
+				obj.Material = data.Material
+				obj.Reflectance = data.Reflectance
+			end
+		end
+	end
+
+	Saved = {}
+end
+
+Button.MouseButton1Click:Connect(function()
+	Enabled = not Enabled
+
+	if Enabled then
+		Button.Text = "FPS ON"
+		Button.BackgroundColor3 = Color3.fromRGB(0,255,0)
+		EnableBoost()
+	else
+		Button.Text = "FPS OFF"
+		Button.BackgroundColor3 = Color3.fromRGB(255,50,50)
+		DisableBoost()
+	end
+end)
