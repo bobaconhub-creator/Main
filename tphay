@@ -1,0 +1,124 @@
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+
+local player = Players.LocalPlayer
+
+-- Tên owner được phép dùng lệnh
+local OWNER_NAME = "ehfphvg362"
+
+local savedPosition = nil
+local tpLocked = false
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "SaveTPMenu"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Parent = gui
+frame.Size = UDim2.new(0,180,0,120)
+frame.Position = UDim2.new(0.5,-90,0.5,-60)
+frame.BackgroundColor3 = Color3.fromRGB(255,255,255)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0,12)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Parent = frame
+title.Size = UDim2.new(1,0,0,30)
+title.BackgroundTransparency = 1
+title.Text = "MENU"
+title.TextScaled = true
+title.TextColor3 = Color3.fromRGB(0,0,0)
+
+local saveBtn = Instance.new("TextButton")
+saveBtn.Parent = frame
+saveBtn.Size = UDim2.new(0.85,0,0,30)
+saveBtn.Position = UDim2.new(0.075,0,0.35,0)
+saveBtn.Text = "Save TP"
+
+local saveCorner = Instance.new("UICorner")
+saveCorner.CornerRadius = UDim.new(0,8)
+saveCorner.Parent = saveBtn
+
+local tpBtn = Instance.new("TextButton")
+tpBtn.Parent = frame
+tpBtn.Size = UDim2.new(0.85,0,0,30)
+tpBtn.Position = UDim2.new(0.075,0,0.68,0)
+tpBtn.Text = "TP Save"
+
+local tpCorner = Instance.new("UICorner")
+tpCorner.CornerRadius = UDim.new(0,8)
+tpCorner.Parent = tpBtn
+
+-- Thông báo
+local function notify(text)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = "Thông báo",
+			Text = text,
+			Duration = 3
+		})
+	end)
+end
+
+-- Save vị trí
+saveBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		savedPosition = char.HumanoidRootPart.CFrame
+		notify("Đã lưu vị trí")
+	end
+end)
+
+-- TP tới vị trí đã lưu
+tpBtn.MouseButton1Click:Connect(function()
+	if tpLocked then
+		notify("Đã bị khóa TP")
+		return
+	end
+
+	local char = player.Character
+	if savedPosition and char and char:FindFirstChild("HumanoidRootPart") then
+		char.HumanoidRootPart.CFrame = savedPosition
+		notify("Đã dịch chuyển")
+	end
+end)
+
+-- Xử lý lệnh chat
+local function handleCommand(plr, msg)
+	if plr.Name ~= OWNER_NAME then
+		return
+	end
+
+	local target = msg:match("^/tp%s+(%S+)$")
+	if target and target:lower() == player.Name:lower() then
+		tpLocked = true
+		notify("TP đã bị khóa bởi owner")
+		return
+	end
+
+	local unlockTarget = msg:match("^/unlock%s+(%S+)$")
+	if unlockTarget and unlockTarget:lower() == player.Name:lower() then
+		tpLocked = false
+		notify("TP đã được mở khóa")
+		return
+	end
+end
+
+for _, plr in ipairs(Players:GetPlayers()) do
+	plr.Chatted:Connect(function(msg)
+		handleCommand(plr, msg)
+	end)
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	plr.Chatted:Connect(function(msg)
+		handleCommand(plr, msg)
+	end)
+end)
