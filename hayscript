@@ -437,9 +437,10 @@ end
 addScriptButton("Blox Fruit",20,20,"https://raw.githubusercontent.com/fakekuri/Okhubhere/refs/heads/main/MainBloxFruit.lua")
 addScriptButton("fly",20,70,"https://raw.githubraw.githubusercontent.cus.com/bobaconhub-creator/Main/refs/heads/main/fly")
 addScriptButton("tp",20,120,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
-addScriptButton("",20,170,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
+addScriptButton("fixlag",20,170,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
+addScriptButton("turbo lite",20,220,"https://raw.githubusercontent.com/TurboLite/Script/refs/heads/main/MainV2.lua")
 
--------------------------------------------------
+main----------------------------------------------
 -- TAB SETTING
 local speedLabel = Instance.new("TextLabel", Tabs["Setting"])
 speedLabel.Size = UDim2.new(0,150,0,20)
