@@ -437,6 +437,7 @@ end
 addScriptButton("Blox Fruit",20,20,"https://raw.githubusercontent.com/fakekuri/Okhubhere/refs/heads/main/MainBloxFruit.lua")
 addScriptButton("fly",20,70,"https://raw.githubraw.githubusercontent.cus.com/bobaconhub-creator/Main/refs/heads/main/fly")
 addScriptButton("tp",20,120,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
+addScriptButton("",20,170,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
 
 -------------------------------------------------
 -- TAB SETTING
