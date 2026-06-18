@@ -439,9 +439,10 @@ addScriptButton("fly",20,70,"https://raw.githubusercontent.com/bobaconhub-creato
 addScriptButton("tp",20,120,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
 addScriptButton("fixlag",20,170,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
 addScriptButton("turbo lite",20,220,"https://raw.githubusercontent.com/TurboLite/Script/refs/heads/main/MainV2.lua")
+addScriptButton("99night",20,270,"https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
 
 -------------------------------------------------
--- TAB SETTING
+-- TABhthttp SETTING
 local speedLabel = Instance.new("TextLabel", Tabs["Setting"])
 speedLabel.Size = UDim2.new(0,150,0,20)
 speedLabel.Position = UDim2.new(0,20,0,10)
