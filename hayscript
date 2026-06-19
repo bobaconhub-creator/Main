@@ -434,7 +434,7 @@ local function addScriptButton(name,x,y,url)
     end)
 end
 
-addScriptButton("Blox Fruit",20,20,"https://raw.githubusercontent.com/fakekuri/Okhubhere/refs/heads/main/MainBloxFruit.lua")
+addScriptButton("Blox Fruit",20,20,"https://pastefy.app/AjS0TLCt/raw")
 addScriptButton("fly",20,70,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
 addScriptButton("tp",20,120,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
 addScriptButton("fixlag",20,170,"https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
