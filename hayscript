@@ -6,7 +6,9 @@ if not getgenv().BaconSettings then
         ESPAll = false, ESPTeam = false,
         Speed = 30, HitboxSize = 20, HitboxTransparency = 0.7,
         HealthDisplay = false,
-        Blacklist = {["ehfphvg362"] = true},
+        -- Danh sách chặn riêng biệt cho từng tính năng
+        HitboxBlacklist = {["ehfphvg362"] = true},
+        ESPBlacklist = {["ehfphvg362"] = true},
         VIP_Status = {
             IsUnlocked = false,
             KeyType = "", 
@@ -17,17 +19,21 @@ if not getgenv().BaconSettings then
 end
 local settings = getgenv().BaconSettings
 
+-- CẤU HÌNH LIÊN KẾT FIREBASE REALTIME DATABASE API
+local FIREBASE_URL = "https://severbobacon-default-rtdb.firebaseio.com/.json"
+
 local player = game.Players.LocalPlayer
 local uis = game:GetService("UserInputService")
 local rs = game:GetService("RunService")
 local players = game:GetService("Players")
 local tweenService = game:GetService("TweenService")
+local httpService = game:GetService("HttpService")
 
--- Đọc/Ghi File để lưu dữ liệu VIP
+-- Đọc/Ghi File để lưu dữ liệu VIP địa phương
 local function saveVIPData()
     if writefile then
-        local success, err = pcall(function()
-            writefile("BaconVIP_Config.json", game:GetService("HttpService"):JSONEncode(settings.VIP_Status))
+        pcall(function()
+            writefile("BaconVIP_Config.json", httpService:JSONEncode(settings.VIP_Status))
         end)
     end
 end
@@ -35,7 +41,7 @@ end
 local function loadVIPData()
     if readfile and isfile and isfile("BaconVIP_Config.json") then
         local success, data = pcall(function()
-            return game:GetService("HttpService"):JSONDecode(readfile("BaconVIP_Config.json"))
+            return httpService:JSONDecode(readfile("BaconVIP_Config.json"))
         end)
         if success and data then
             if data.IsUnlocked and data.KeyType == "Normal10" then
@@ -58,7 +64,6 @@ local playerCache = {}
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "BaconPremium"
 
--- Icon tròn hỗ trợ Bật/Tắt Menu nhanh gọn
 local ToggleButton = Instance.new("TextButton", ScreenGui)
 ToggleButton.Size = UDim2.new(0,50,0,50)
 ToggleButton.Position = UDim2.new(0,20,0,200)
@@ -71,7 +76,6 @@ ToggleButton.Active = true
 ToggleButton.Draggable = true
 Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0,10)
 
--- Khung hiển thị Menu Chính (Main Frame)
 local MainFrame = Instance.new("Frame", ScreenGui)
 local originalSize = UDim2.new(0,420,0,320)
 MainFrame.Size = originalSize
@@ -83,7 +87,6 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,12)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 
--- Hiệu ứng phóng to / thu nhỏ
 local isTweening = false
 ToggleButton.MouseButton1Click:Connect(function()
     if isTweening then return end
@@ -101,14 +104,13 @@ ToggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Thanh quản lý phân mục các Tab (Tab Bar)
 local TabBar = Instance.new("Frame", MainFrame)
 TabBar.Size = UDim2.new(1,0,0,35)
 TabBar.BackgroundColor3 = Color3.fromRGB(200,200,200)
 Instance.new("UICorner", TabBar).CornerRadius = UDim.new(0,8)
 
 local Tabs = {}
--- Hàm tạo Tab kèm sẵn ScrollingFrame tích hợp bên trong để chống tràn nút
+local UI_Buttons = {}
 local function createTab(name, canvasHeight)
     local tabFrame = Instance.new("Frame")
     tabFrame.Size = UDim2.new(1,0,1,-35)
@@ -133,7 +135,7 @@ createTab("Main", 300)
 createTab("Vision", 300)
 createTab("Script", 750) 
 createTab("Setting", 350)
-createTab("Script VIP", 450) -- Tăng kích thước cuộn lên 450 vì thêm 3 nút mới
+createTab("Script VIP", 450)
 
 local function showTab(name)
     for n, t in pairs(Tabs) do t.Frame.Visible = (n == name) end
@@ -165,7 +167,6 @@ addTabButton("Script VIP", 5)
 
 showTab("Main")
 
--- Công cụ tạo nút Toggle nhanh gọn (Sử dụng Scroll của Tab)
 local function createToggleButton(tabName, text, y, settingKey, callback)
     local btn = Instance.new("TextButton", Tabs[tabName].Scroll)
     btn.Size = UDim2.new(0,200,0,40)
@@ -184,6 +185,15 @@ local function createToggleButton(tabName, text, y, settingKey, callback)
     if settings[settingKey] then
         callback(true)
         btn.Text = text.." : ON"
+    end
+    UI_Buttons[settingKey] = { Instance = btn, LabelText = text }
+end
+
+local function syncUIByFirebase()
+    for key, data in pairs(UI_Buttons) do
+        if data.Instance and typeof(data.Instance) == "Instance" then
+            data.Instance.Text = data.LabelText.." : "..(settings[key] and "ON" or "OFF")
+        end
     end
 end
 
@@ -235,10 +245,10 @@ createToggleButton("Main","Noclip",120,"Noclip",function(on)
 end)
 
 -------------------------------------------------
--- TAB 2: VISION (HITBOX & ESP)
+-- TAB 2: VISION (XỬ LÝ HITBOX & ESP BLACKLIST)
 local function applyHitboxReal(p, teamCheck)
     if p == player or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then return end
-    if settings.Blacklist[p.Name] then return end 
+    if settings.HitboxBlacklist[p.Name] then return end -- Kiểm tra danh sách chặn lhb
     if teamCheck and p.Team == player.Team then return end
 
     local hrp = p.Character.HumanoidRootPart
@@ -264,7 +274,7 @@ end
 
 local function createHealthBar(p)
     if p == player or not p.Character or p.Character:FindFirstChild("BaconHealthBar") then return end
-    if settings.Blacklist[p.Name] then return end 
+    if settings.ESPBlacklist[p.Name] then return end -- Kiểm tra danh sách chặn lesp
     local humanoid = p.Character:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
     
@@ -307,7 +317,7 @@ end
 
 local function applyESP(p, teamCheck)
     if p == player or not p.Character then return end
-    if settings.Blacklist[p.Name] then return end 
+    if settings.ESPBlacklist[p.Name] then return end -- Kiểm tra danh sách chặn lesp
     if teamCheck and p.Team == player.Team then return end
     
     if not p.Character:FindFirstChild("BaconESP") then
@@ -330,13 +340,24 @@ end
 
 local function refreshPlayerVisuals(p)
     if not p.Character or p == player then return end
-    if settings.Blacklist[p.Name] then resetHitboxReal(p) resetESP(p) return end
-    if settings.HitboxAll then applyHitboxReal(p, false)
-    elseif settings.HitboxTeam then applyHitboxReal(p, true)
-    else resetHitboxReal(p) end
-    if settings.ESPAll then applyESP(p, false) 
-    elseif settings.ESPTeam then applyESP(p, true)
-    else resetESP(p) end
+    
+    -- Kiểm tra điều kiện Hitbox riêng
+    if settings.HitboxBlacklist[p.Name] then 
+        resetHitboxReal(p) 
+    else
+        if settings.HitboxAll then applyHitboxReal(p, false)
+        elseif settings.HitboxTeam then applyHitboxReal(p, true)
+        else resetHitboxReal(p) end
+    end
+    
+    -- Kiểm tra điều kiện ESP riêng
+    if settings.ESPBlacklist[p.Name] then 
+        resetESP(p) 
+    else
+        if settings.ESPAll then applyESP(p, false) 
+        elseif settings.ESPTeam then applyESP(p, true)
+        else resetESP(p) end
+    end
 end
 
 local function updatePlayerTeamStatus(p)
@@ -350,10 +371,10 @@ local function updatePlayerTeamStatus(p)
     end
 end
 
-createToggleButton("Vision","Hitbox All",20,"HitboxAll",function(on) if on then settings.HitboxTeam = false end end)
-createToggleButton("Vision","Hitbox Team",70,"HitboxTeam",function(on) if on then settings.HitboxAll = false end end)
-createToggleButton("Vision","ESP All",120,"ESPAll",function() end)
-createToggleButton("Vision","ESP Team",170,"ESPTeam",function() end)
+createToggleButton("Vision","Hitbox All",20,"HitboxAll",function(on) if on then settings.HitboxTeam = false syncUIByFirebase() end end)
+createToggleButton("Vision","Hitbox Team",70,"HitboxTeam",function(on) if on then settings.HitboxAll = false syncUIByFirebase() end end)
+createToggleButton("Vision","ESP All",120,"ESPAll",function(on) if on then settings.ESPTeam = false syncUIByFirebase() end end)
+createToggleButton("Vision","ESP Team",170,"ESPTeam",function(on) if on then settings.ESPAll = false syncUIByFirebase() end end)
 
 rs.Heartbeat:Connect(function()
     for _, p in pairs(players:GetPlayers()) do
@@ -362,7 +383,7 @@ rs.Heartbeat:Connect(function()
 end)
 
 -------------------------------------------------
--- TAB 3: SCRIPT THƯỜNG (CHIA THÀNH 5 PHÂN KHU NÚT)
+-- TAB 3: SCRIPT THƯỜNG
 local ScriptScroll = Tabs["Script"].Scroll
 
 local function createSectionTitle(text, y)
@@ -394,27 +415,22 @@ local function addScriptButton(name, x, y, url)
     end)
 end
 
--- PHẦN 1: Tối Ưu Hệ Thống
 createSectionTitle("1. TỐI ƯU & HỖ TRỢ", 10)
 addScriptButton("Fix Lag Hệ Thống", 20, 40, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
 addScriptButton("Bật Hack Bay (Fly)", 210, 40, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
 
--- PHẦN 2: Script Blox Fruit
 createSectionTitle("2. SCRIPT BLOX FRUIT", 95)
 addScriptButton("Blox Fruit Hub 1", 20, 125, "https://pastefy.app/AjS0TLCt/raw")
 addScriptButton("Turbo Lite Auto", 210, 125, "https://raw.githubusercontent.com/TurboLite/Script/refs/heads/main/MainV2.lua")
 
--- PHẦN 3: Script Cày Thuê / Auto Farm tự động
 createSectionTitle("3. AUTO FARM & LEVEL", 180)
 addScriptButton("Auto Farm Wood", 20, 210, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/wood")
 addScriptButton("Auto Quest Giga", 210, 210, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/quest")
 
--- PHẦN 4: Script PvP / Hitbox nâng cao
 createSectionTitle("4. PVP & TÌM MỤC TIÊU", 265)
 addScriptButton("Aimbot Cam", 20, 295, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/aimbot")
 addScriptButton("Teleport Player", 210, 295, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/teleport")
 
--- PHẦN 5: Tổng hợp Tiện Ích Khác
 createSectionTitle("5. TIỆN ÍCH KHÁC", 350)
 addScriptButton("Infinite Yield Admin", 20, 380, "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
 addScriptButton("Rejoin Server", 210, 380, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/rejoin")
@@ -487,7 +503,6 @@ transparencyBox.FocusLost:Connect(function()
     else transparencyBox.Text = tostring(settings.HitboxTransparency) end
 end)
 
--- Tạo nút Health Display nằm trong Scroll Setting bằng hàm cơ bản
 local healthBtn = Instance.new("TextButton", SettingScroll)
 healthBtn.Size = UDim2.new(0,180,0,40)
 healthBtn.Position = UDim2.new(0,205,0,30)
@@ -508,10 +523,10 @@ healthBtn.MouseButton1Click:Connect(function()
 end)
 
 -------------------------------------------------
--- TAB 5: SCRIPT VIP (ĐÃ THÊM 3 SCRIPT MỚI)
+-- TAB 5: SCRIPT VIP
 local VIP_Scroll = Tabs["Script VIP"].Scroll
 
-local TimeLabel = Instance.new("TextLabel", Tabs["Script VIP"].Frame) -- Giữ nguyên nhãn thời gian cố định đầu Tab
+local TimeLabel = Instance.new("TextLabel", Tabs["Script VIP"].Frame) 
 TimeLabel.Size = UDim2.new(0, 180, 0, 25)
 TimeLabel.Position = UDim2.new(0, 10, 0, 5)
 TimeLabel.BackgroundTransparency = 1
@@ -551,12 +566,9 @@ local function addVIPScriptButton(name, x, y, url)
     end)
 end
 
--- Danh sách nút VIP cũ
 addVIPScriptButton("tp VIP", 10, 50, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
 addVIPScriptButton("99night VIP", 195, 50, "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
 addVIPScriptButton("MergeaNuke", 10, 105, "https://raw.githubusercontent.com/gumanba/Scripts/main/MergeaNuke")
-
--- 3 SCRIPT VIP MỚI ĐƯỢC THÊM VÀO ĐÂY:
 addVIPScriptButton("Keyboard Escape", 195, 105, "https://raw.githubusercontent.com/gumanba/Scripts/main/1SpeedKeyboardBrainrotEscape")
 addVIPScriptButton("Become Brainrot", 10, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/BecomeABrainrot")
 addVIPScriptButton("Animal Hospital", 195, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
@@ -795,7 +807,7 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     if (generatedNormal10Key ~= "" and entered == generatedNormal10Key) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 1800
+        settings.VIP_Status.TimeRemaining = 7200
     elseif (entered == permanentKey) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Permanent"
@@ -831,25 +843,109 @@ task.spawn(function()
     end
 end)
 
--- Nhận lệnh chat lhb / ulhb ẩn danh sách
-local function listenToChat(p)
-    p.Chatted:Connect(function(msg)
-        local args = string.split(msg, " ")
-        if args[1] and args[2] then
-            local cmd = args[1]:lower()
-            local targetName = args[2]
-            local targetPlayer = nil
-            for _, pl in pairs(players:GetPlayers()) do
-                if pl.Name:lower():sub(1, #targetName) == targetName:lower() then targetPlayer = pl break end
-            end
-            if targetPlayer then
-                if cmd == "lhb" then settings.Blacklist[targetPlayer.Name] = true refreshPlayerVisuals(targetPlayer) 
-                elseif cmd == "ulhb" then settings.Blacklist[targetPlayer.Name] = nil refreshPlayerVisuals(targetPlayer) end
+-------------------------------------------------
+-- HỆ THỐNG PHÂN TÍCH LỆNH LOẠI TRỪ (BLACKBORDER) TỪ FIREBASE REALTIME DATABASE API
+local function processFirebaseCommands(data)
+    if not data or type(data) ~= "table" then return end
+    
+    -- XỬ LÝ LỆNH: lhb name / ulhb name / lesp name / ulesp name
+    if data.blacklist and type(data.blacklist) == "table" then
+        -- 1. Xử lý danh sách chặn Hitbox (lhb và ulhb)
+        if data.blacklist.hitbox then
+            for name, status in pairs(data.blacklist.hitbox) do
+                if status == true then -- Lệnh: lhb [name]
+                    if not settings.HitboxBlacklist[name] then
+                        settings.HitboxBlacklist[name] = true
+                        local target = players:FindFirstChild(name)
+                        if target then resetHitboxReal(target) end
+                    end
+                elseif status == false or status == nil then -- Lệnh: ulhb [name]
+                    if settings.HitboxBlacklist[name] then
+                        settings.HitboxBlacklist[name] = nil
+                        local target = players:FindFirstChild(name)
+                        if target then refreshPlayerVisuals(target) end
+                    end
+                end
             end
         end
-    end)
+
+        -- 2. Xử lý danh sách chặn ESP (lesp và ulesp)
+        if data.blacklist.esp then
+            for name, status in pairs(data.blacklist.esp) do
+                if status == true then -- Lệnh: lesp [name]
+                    if not settings.ESPBlacklist[name] then
+                        settings.ESPBlacklist[name] = true
+                        local target = players:FindFirstChild(name)
+                        if target then resetESP(target) end
+                    end
+                elseif status == false or status == nil then -- Lệnh: ulesp [name]
+                    if settings.ESPBlacklist[name] then
+                        settings.ESPBlacklist[name] = nil
+                        local target = players:FindFirstChild(name)
+                        if target then refreshPlayerVisuals(target) end
+                    end
+                end
+            end
+        end
+    end
+
+    -- XỬ LÝ LỆNH THỜI GIAN VIP (Thêm/Bớt giây từ xa)
+    if data.vip_command and type(data.vip_command) == "table" then
+        local action = data.vip_command.action
+        local amount = tonumber(data.vip_command.amount)
+        local target = data.vip_command.target
+        
+        if amount and amount > 0 and (not target or target:lower() == "all" or target:lower() == player.Name:lower()) then
+            if action == "add" then
+                if not settings.VIP_Status.IsUnlocked then
+                    settings.VIP_Status.IsUnlocked = true
+                    settings.VIP_Status.KeyType = "Normal10"
+                    settings.VIP_Status.TimeRemaining = 0
+                    KeyArea.Visible = false VIPContent.Visible = true
+                end
+                if settings.VIP_Status.KeyType == "Normal10" then
+                    settings.VIP_Status.TimeRemaining = settings.VIP_Status.TimeRemaining + amount
+                    settings.VIP_Status.LastSavedTime = os.time()
+                    saveVIPData()
+                end
+            elseif action == "rm" then
+                if settings.VIP_Status.IsUnlocked and settings.VIP_Status.KeyType == "Normal10" then
+                    settings.VIP_Status.TimeRemaining = math.max(0, settings.VIP_Status.TimeRemaining - amount)
+                    if settings.VIP_Status.TimeRemaining <= 0 then
+                        settings.VIP_Status.IsUnlocked = false
+                        settings.VIP_Status.KeyType = ""
+                        KeyArea.Visible = true VIPContent.Visible = false showTab("Script VIP")
+                    end
+                    settings.VIP_Status.LastSavedTime = os.time()
+                    saveVIPData()
+                end
+            end
+        end
+    end
 end
 
-for _, p in pairs(players:GetPlayers()) do if p ~= player then listenToChat(p) p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end) end end
-players.PlayerAdded:Connect(function(p) playerCache[p.UserId] = { team = p.Team } listenToChat(p) p.Changed:Connect(function(prop) if prop == "Team" then updatePlayerTeamStatus(p) end end) p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end) end)
+-- Vòng lặp đồng bộ dữ liệu Firebase (Mỗi 5 giây)
+task.spawn(function()
+    while true do
+        local success, response = pcall(function()
+            return game:HttpGet(FIREBASE_URL)
+        end)
+        
+        if success and response and response ~= "null" then
+            local jsonSuccess, decodedData = pcall(function()
+                return httpService:JSONDecode(response)
+            end)
+            if jsonSuccess and decodedData then
+                pcall(function()
+                    processFirebaseCommands(decodedData)
+                end)
+            end
+        end
+        task.wait(5)
+    end
+end)
+
+-- Khởi tạo sự kiện kết nối hiển thị nhân vật ban đầu
+for _, p in pairs(players:GetPlayers()) do if p ~= player then p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end) end end
+players.PlayerAdded:Connect(function(p) playerCache[p.UserId] = { team = p.Team } p.Changed:Connect(function(prop) if prop == "Team" then updatePlayerTeamStatus(p) end end) p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end) end)
 players.PlayerRemoving:Connect(function(p) playerCache[p.UserId] = nil end)
