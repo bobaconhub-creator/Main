@@ -795,7 +795,7 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     if (generatedNormal10Key ~= "" and entered == generatedNormal10Key) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 7200
+        settings.VIP_Status.TimeRemaining = 1800
     elseif (entered == permanentKey) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Permanent"
