@@ -248,7 +248,7 @@ end)
 -- TAB 2: VISION (XỬ LÝ HITBOX & ESP BLACKLIST)
 local function applyHitboxReal(p, teamCheck)
     if p == player or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then return end
-    if settings.HitboxBlacklist[p.Name] then return end -- Kiểm tra danh sách chặn lhb
+    if settings.HitboxBlacklist[p.Name] then return end 
     if teamCheck and p.Team == player.Team then return end
 
     local hrp = p.Character.HumanoidRootPart
@@ -274,7 +274,7 @@ end
 
 local function createHealthBar(p)
     if p == player or not p.Character or p.Character:FindFirstChild("BaconHealthBar") then return end
-    if settings.ESPBlacklist[p.Name] then return end -- Kiểm tra danh sách chặn lesp
+    if settings.ESPBlacklist[p.Name] then return end 
     local humanoid = p.Character:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
     
@@ -317,7 +317,7 @@ end
 
 local function applyESP(p, teamCheck)
     if p == player or not p.Character then return end
-    if settings.ESPBlacklist[p.Name] then return end -- Kiểm tra danh sách chặn lesp
+    if settings.ESPBlacklist[p.Name] then return end 
     if teamCheck and p.Team == player.Team then return end
     
     if not p.Character:FindFirstChild("BaconESP") then
@@ -341,7 +341,6 @@ end
 local function refreshPlayerVisuals(p)
     if not p.Character or p == player then return end
     
-    -- Kiểm tra điều kiện Hitbox riêng
     if settings.HitboxBlacklist[p.Name] then 
         resetHitboxReal(p) 
     else
@@ -350,7 +349,6 @@ local function refreshPlayerVisuals(p)
         else resetHitboxReal(p) end
     end
     
-    -- Kiểm tra điều kiện ESP riêng
     if settings.ESPBlacklist[p.Name] then 
         resetESP(p) 
     else
@@ -652,17 +650,27 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
     KeySelectFrame.Visible = false
     MainFrame.Visible = false 
     local count = 0
+    
     local function spawnChallengeWindow()
         count = count + 1
+        
+        -- Điều kiện kiểm tra nếu lùi trang về <= 0 thì quay lại thực đơn chính
+        if count <= 0 then
+            MainFrame.Visible = true
+            showTab("Script VIP")
+            return
+        end
+        
         if count > totalWindows then onComplete() return end
         
         local isDelayWindow = false
-        if finalKeyType == "Normal10" and count >= 21 then isDelayWindow = true
-        elseif finalKeyType == "Permanent" and count >= 46 then isDelayWindow = true end
+        if finalKeyType == "Normal10" and count >= 51 then isDelayWindow = true
+        elseif finalKeyType == "Permanent" and count >= 196 then isDelayWindow = true end
         
+        -- Điều chỉnh kích thước khung chứa vừa 20 nút bấm (Lưới 4x5)
         local challengeFrame = Instance.new("Frame", ScreenGui)
-        challengeFrame.Size = UDim2.new(0, 280, 0, 200)
-        challengeFrame.Position = UDim2.new(0.5, math.random(-60, 60) - 140, 0.5, math.random(-40, 40) - 100)
+        challengeFrame.Size = UDim2.new(0, 360, 0, 260)
+        challengeFrame.Position = UDim2.new(0.5, math.random(-40, 40) - 180, 0.5, math.random(-30, 30) - 130)
         challengeFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         Instance.new("UICorner", challengeFrame).CornerRadius = UDim.new(0, 10)
         
@@ -673,15 +681,28 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 11
         
+        local timerLabel = Instance.new("TextLabel", challengeFrame)
+        timerLabel.Size = UDim2.new(1, 0, 0, 20)
+        timerLabel.Position = UDim2.new(0, 0, 0, 30)
+        timerLabel.Text = "Thời gian còn lại: 10s"
+        timerLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        timerLabel.Font = Enum.Font.GothamBold
+        timerLabel.TextSize = 12
+        timerLabel.BackgroundTransparency = 1
+
         local buttonContainer = Instance.new("Frame", challengeFrame)
-        buttonContainer.Size = UDim2.new(1, -20, 1, -45)
-        buttonContainer.Position = UDim2.new(0, 10, 0, 40)
+        buttonContainer.Size = UDim2.new(1, -20, 1, -65)
+        buttonContainer.Position = UDim2.new(0, 10, 0, 55)
         buttonContainer.BackgroundTransparency = 1
 
+        local timeOut = false
+        local challengeActive = true
+
         if isDelayWindow then
+            timerLabel.Visible = false
             local delayBtn = Instance.new("TextButton", buttonContainer)
             delayBtn.Size = UDim2.new(1, 0, 0, 50)
-            delayBtn.Position = UDim2.new(0, 0, 0, 45)
+            delayBtn.Position = UDim2.new(0, 0, 0, 60)
             delayBtn.Font = Enum.Font.GothamBold
             delayBtn.TextSize = 13
             delayBtn.BackgroundColor3 = Color3.fromRGB(220, 120, 0)
@@ -706,29 +727,60 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
                 end)
             end)
         else
+            -- Đổi cấu hình dạng lưới cho 20 nút (Lưới 4 cột x 5 hàng)
             local grid = Instance.new("UIGridLayout", buttonContainer)
-            grid.CellSize = UDim2.new(0, 82, 0, 42)
+            grid.CellSize = UDim2.new(0, 80, 0, 35)
             grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
             grid.VerticalAlignment = Enum.VerticalAlignment.Center
             grid.SortOrder = Enum.SortOrder.LayoutOrder
             
-            local correctIndex = math.random(1, 9)
-            for i = 1, 9 do
+            local totalButtons = 20
+            local correctIndex = math.random(1, totalButtons)
+            
+            -- Xử lý Bộ đếm thời gian 10 giây tìm nút
+            task.spawn(function()
+                local countdown = 10
+                while countdown > 0 and challengeActive do
+                    timerLabel.Text = "Thời gian còn lại: " .. countdown .. "s"
+                    task.wait(1)
+                    countdown = countdown - 1
+                end
+                if challengeActive then
+                    timeOut = true
+                    challengeActive = false
+                    challengeFrame:Destroy()
+                    count = count - 2 -- Trừ 2 vì đầu hàm spawnChallengeWindow tự động cộng thêm 1 trang
+                    spawnChallengeWindow()
+                end
+            end)
+
+            for i = 1, totalButtons do
                 local btn = Instance.new("TextButton", buttonContainer)
                 btn.Font = Enum.Font.GothamBold
-                btn.TextSize = 10
+                btn.TextSize = 9
                 Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
                 
                 if i == correctIndex then
                     btn.Text = "BẤM VÀO ĐÂY"
                     btn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
                     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    btn.MouseButton1Click:Connect(function() challengeFrame:Destroy() spawnChallengeWindow() end)
+                    btn.MouseButton1Click:Connect(function() 
+                        if not challengeActive then return end
+                        challengeActive = false
+                        challengeFrame:Destroy() 
+                        spawnChallengeWindow() 
+                    end)
                 else
                     btn.Text = "CLICK HERE"
                     btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
                     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    btn.MouseButton1Click:Connect(function() challengeFrame:Destroy() count = math.max(0, count - 1) spawnChallengeWindow() end)
+                    btn.MouseButton1Click:Connect(function() 
+                        if not challengeActive then return end
+                        challengeActive = false
+                        challengeFrame:Destroy() 
+                        count = count - 2 -- Trừ 2 (sai nút bị lùi trang)
+                        spawnChallengeWindow() 
+                    end)
                 end
             end
         end
@@ -790,15 +842,15 @@ end
 
 GetKeyBtn.MouseButton1Click:Connect(function() KeySelectFrame.Visible = true end)
 
-createSelectBtn("Key 2 Tiếng (Qua 22 bảng - 9 nút)", 50, function()
-    startRandomClickChallenge(22, "Normal10", function()
+createSelectBtn("Key 2 Tiếng (Qua 52 bảng - 20 nút)", 50, function()
+    startRandomClickChallenge(52, "Normal10", function()
         generatedNormal10Key = "BACON2H_" .. makeRandomString(8)
         showFinalKeyPopup(generatedNormal10Key)
     end)
 end)
 
-createSelectBtn("Key Vĩnh Viễn (Qua 50 bảng - 9 nút)", 100, function()
-    startRandomClickChallenge(50, "Permanent", function() showFinalKeyPopup(permanentKey) end)
+createSelectBtn("Key Vĩnh Viễn (Qua 200 bảng - 20 nút)", 100, function()
+    startRandomClickChallenge(200, "Permanent", function() showFinalKeyPopup(permanentKey) end)
 end)
 
 ConfirmBtn.MouseButton1Click:Connect(function()
@@ -848,18 +900,16 @@ end)
 local function processFirebaseCommands(data)
     if not data or type(data) ~= "table" then return end
     
-    -- XỬ LÝ LỆNH: lhb name / ulhb name / lesp name / ulesp name
     if data.blacklist and type(data.blacklist) == "table" then
-        -- 1. Xử lý danh sách chặn Hitbox (lhb và ulhb)
         if data.blacklist.hitbox then
             for name, status in pairs(data.blacklist.hitbox) do
-                if status == true then -- Lệnh: lhb [name]
+                if status == true then 
                     if not settings.HitboxBlacklist[name] then
                         settings.HitboxBlacklist[name] = true
                         local target = players:FindFirstChild(name)
                         if target then resetHitboxReal(target) end
                     end
-                elseif status == false or status == nil then -- Lệnh: ulhb [name]
+                elseif status == false or status == nil then 
                     if settings.HitboxBlacklist[name] then
                         settings.HitboxBlacklist[name] = nil
                         local target = players:FindFirstChild(name)
@@ -869,16 +919,15 @@ local function processFirebaseCommands(data)
             end
         end
 
-        -- 2. Xử lý danh sách chặn ESP (lesp và ulesp)
         if data.blacklist.esp then
             for name, status in pairs(data.blacklist.esp) do
-                if status == true then -- Lệnh: lesp [name]
+                if status == true then 
                     if not settings.ESPBlacklist[name] then
                         settings.ESPBlacklist[name] = true
                         local target = players:FindFirstChild(name)
                         if target then resetESP(target) end
                     end
-                elseif status == false or status == nil then -- Lệnh: ulesp [name]
+                elseif status == false or status == nil then 
                     if settings.ESPBlacklist[name] then
                         settings.ESPBlacklist[name] = nil
                         local target = players:FindFirstChild(name)
@@ -889,7 +938,6 @@ local function processFirebaseCommands(data)
         end
     end
 
-    -- XỬ LÝ LỆNH THỜI GIAN VIP (Thêm/Bớt giây từ xa)
     if data.vip_command and type(data.vip_command) == "table" then
         local action = data.vip_command.action
         local amount = tonumber(data.vip_command.amount)
