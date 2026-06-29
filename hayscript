@@ -541,7 +541,6 @@ end)
 -- TAB 5: SCRIPT VIP & HỆ THỐNG KIỂM TRA BẢO MẬT KEY
 local VIP_Tab = Tabs["Script VIP"]
 
--- Nhãn hiển thị thời gian hạn dùng (Đặt ở Góc trên cùng bên trái)
 local TimeLabel = Instance.new("TextLabel", VIP_Tab)
 TimeLabel.Size = UDim2.new(0, 180, 0, 25)
 TimeLabel.Position = UDim2.new(0, 10, 0, 5)
@@ -552,13 +551,11 @@ TimeLabel.TextSize = 12
 TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
 TimeLabel.Text = "VIP Status: Locked"
 
--- Phân vùng Nội dung chính VIP (CHỈ HIỂN THỊ KHI ĐÃ NHẬP ĐÚNG KEY)
--- Đổi sang dùng ScrollingFrame để có thể cuộn xuống nếu thêm nhiều nút script sau này
 local VIPContent = Instance.new("ScrollingFrame", VIP_Tab)
 VIPContent.Size = UDim2.new(1, 0, 1, -35)
 VIPContent.Position = UDim2.new(0, 0, 0, 35)
 VIPContent.BackgroundTransparency = 1
-VIPContent.CanvasSize = UDim2.new(0, 0, 0, 220) -- Tự động kéo dài vùng chứa nút
+VIPContent.CanvasSize = UDim2.new(0, 0, 0, 220)
 VIPContent.ScrollBarThickness = 5
 VIPContent.Visible = false
 
@@ -571,12 +568,11 @@ VIPLabel.Text = "★ CHÚC MỪNG! BẠN ĐÃ MỞ KHÓA VIP SCRIPT ★"
 VIPLabel.Font = Enum.Font.GothamBold
 VIPLabel.TextSize = 14
 
--- Hàm tạo các nút Script VIP riêng tư
 local function addVIPScriptButton(name, x, y, url)
     local btn = Instance.new("TextButton", VIPContent)
     btn.Size = UDim2.new(0, 170, 0, 40)
     btn.Position = UDim2.new(0, x, 0, y)
-    btn.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- Màu vàng Gold Premium
+    btn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     btn.Text = "⭐ " .. name
     btn.TextColor3 = Color3.fromRGB(0, 0, 0)
     btn.Font = Enum.Font.GothamBold
@@ -589,12 +585,10 @@ local function addVIPScriptButton(name, x, y, url)
     end)
 end
 
--- UPDATE: THÊM NÚT SCRIPT THỨ 3 VÀO VÙNG BẢO MẬT VIP (MergeaNuke)
 addVIPScriptButton("tp VIP", 20, 50, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
 addVIPScriptButton("99night VIP", 210, 50, "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
 addVIPScriptButton("MergeaNuke", 20, 105, "https://raw.githubusercontent.com/gumanba/Scripts/main/MergeaNuke")
 
--- Phân vùng Cổng Nhập Key
 local KeyArea = Instance.new("Frame", VIP_Tab)
 KeyArea.Size = UDim2.new(1, 0, 1, -35)
 KeyArea.Position = UDim2.new(0, 0, 0, 35)
@@ -629,7 +623,6 @@ GetKeyBtn.Font = Enum.Font.GothamBold
 GetKeyBtn.TextSize = 14
 Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
 
--- KHUNG CHỌN HỆ THỐNG LOẠI KEY QUẢNG CÁO
 local KeySelectFrame = Instance.new("Frame", ScreenGui)
 KeySelectFrame.Size = UDim2.new(0, 300, 0, 160)
 KeySelectFrame.Position = UDim2.new(0.5, -150, 0.5, -80)
@@ -644,7 +637,6 @@ SelectTitle.Font = Enum.Font.GothamBold
 SelectTitle.TextSize = 14
 SelectTitle.TextColor3 = Color3.fromRGB(0, 0, 0)
 
--- Hàm tạo dấu X để đóng bảng
 local function createCloseX(parent, callback)
     local closeX = Instance.new("TextButton", parent)
     closeX.Size = UDim2.new(0, 25, 0, 25)
@@ -673,7 +665,7 @@ local function makeRandomString(length)
     return str
 end
 
--- Vòng lặp Nhấp bảng quảng cáo ngẫu nhiên (An toàn cố định tâm màn hình, không sợ khuất nút)
+-- CƠ CHẾ QUẢNG CÁO MỚI (Hỗ trợ 9 nút cho các bảng thường)
 local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
     KeySelectFrame.Visible = false
     MainFrame.Visible = false 
@@ -686,61 +678,101 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
             return
         end
         
+        -- Xác định xem bảng hiện tại có phải là bảng bắt buộc chờ 2 phút hay không
+        local isDelayWindow = false
+        if finalKeyType == "Normal10" and count >= 21 then
+            isDelayWindow = true -- 2 cái cuối của mốc 22 bảng (Bảng 21, 22)
+        elseif finalKeyType == "Permanent" and count >= 46 then
+            isDelayWindow = true -- 5 cái cuối của mốc 50 bảng (Bảng 46 -> 50)
+        end
+        
         local challengeFrame = Instance.new("Frame", ScreenGui)
-        challengeFrame.Size = UDim2.new(0, 260, 0, 160)
-        challengeFrame.Position = UDim2.new(0.5, math.random(-80, 80) - 130, 0.5, math.random(-60, 60) - 80)
+        -- Tăng kích thước bảng quảng cáo lên một chút (280x200) để vừa vặn 9 nút
+        challengeFrame.Size = UDim2.new(0, 280, 0, 200)
+        challengeFrame.Position = UDim2.new(0.5, math.random(-60, 60) - 140, 0.5, math.random(-40, 40) - 100)
         challengeFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         Instance.new("UICorner", challengeFrame).CornerRadius = UDim.new(0, 10)
         
         local title = Instance.new("TextLabel", challengeFrame)
-        title.Size = UDim2.new(1, 0, 0, 40)
+        title.Size = UDim2.new(1, 0, 0, 35)
         title.Text = "Thử thách quảng cáo VIP ("..count.."/"..totalWindows..")"
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 11
         
-        local correctIndex = math.random(1, 4)
-        
         local buttonContainer = Instance.new("Frame", challengeFrame)
-        buttonContainer.Size = UDim2.new(1, -20, 0, 100)
-        buttonContainer.Position = UDim2.new(0, 10, 0, 45)
+        buttonContainer.Size = UDim2.new(1, -20, 1, -45)
+        buttonContainer.Position = UDim2.new(0, 10, 0, 40)
         buttonContainer.BackgroundTransparency = 1
 
-        local grid = Instance.new("UIGridLayout", buttonContainer)
-        grid.CellSize = UDim2.new(0, 115, 0, 40)
-        grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-        grid.VerticalAlignment = Enum.VerticalAlignment.Center
-        
-        for i = 1, 4 do
-            local btn = Instance.new("TextButton", buttonContainer)
-            btn.Font = Enum.Font.GothamBold
-            btn.TextSize = 12
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        -- Nếu là bảng chờ 2 phút: Chỉ hiện 1 nút kích hoạt đếm ngược
+        if isDelayWindow then
+            local delayBtn = Instance.new("TextButton", buttonContainer)
+            delayBtn.Size = UDim2.new(1, 0, 0, 50)
+            delayBtn.Position = UDim2.new(0, 0, 0, 45)
+            delayBtn.Font = Enum.Font.GothamBold
+            delayBtn.TextSize = 13
+            delayBtn.BackgroundColor3 = Color3.fromRGB(220, 120, 0)
+            delayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            delayBtn.Text = "BẤM VÀO ĐÂY ĐỂ CHỜ QUẢNG CÁO"
+            Instance.new("UICorner", delayBtn).CornerRadius = UDim.new(0, 8)
             
-            if i == correctIndex then
-                btn.Text = "BẤM VÀO ĐÂY"
-                btn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
-                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                btn.MouseButton1Click:Connect(function()
+            local clicked = false
+            delayBtn.MouseButton1Click:Connect(function()
+                if clicked then return end
+                clicked = true
+                delayBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+                
+                local timeLeft = 120
+                task.spawn(function()
+                    while timeLeft > 0 do
+                        delayBtn.Text = "Vui lòng chờ: " .. timeLeft .. "s"
+                        task.wait(1)
+                        timeLeft = timeLeft - 1
+                    end
                     challengeFrame:Destroy()
                     spawnChallengeWindow()
                 end)
-            else
-                btn.Text = "CLICK HERE"
-                btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-                btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-                btn.MouseButton1Click:Connect(function()
-                    challengeFrame:Destroy()
-                    count = count - 1
-                    spawnChallengeWindow()
-                end)
+            end)
+        else
+            -- UPDATE: Thay đổi cơ chế từ 4 nút thành 9 nút (Lưới 3x3)
+            local grid = Instance.new("UIGridLayout", buttonContainer)
+            grid.CellSize = UDim2.new(0, 82, 0, 42) -- Căn chỉnh size nút nhỏ lại vừa khung
+            grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            grid.VerticalAlignment = Enum.VerticalAlignment.Center
+            grid.SortOrder = Enum.SortOrder.LayoutOrder
+            
+            local correctIndex = math.random(1, 9)
+            for i = 1, 9 do
+                local btn = Instance.new("TextButton", buttonContainer)
+                btn.Font = Enum.Font.GothamBold
+                btn.TextSize = 10
+                Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+                
+                if i == correctIndex then
+                    btn.Text = "BẤM VÀO ĐÂY"
+                    btn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+                    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    btn.MouseButton1Click:Connect(function()
+                        challengeFrame:Destroy()
+                        spawnChallengeWindow()
+                    end)
+                else
+                    btn.Text = "CLICK HERE"
+                    btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+                    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    btn.MouseButton1Click:Connect(function()
+                        challengeFrame:Destroy()
+                        count = math.max(0, count - 1) -- phạt lùi lại 1 bảng nếu bấm nút sai
+                        spawnChallengeWindow()
+                    end)
+                end
             end
         end
     end
     spawnChallengeWindow()
 end
 
--- Bảng hiển thị Key cuối cùng
 local function showFinalKeyPopup(keyString)
     local keyPopup = Instance.new("Frame", ScreenGui)
     keyPopup.Size = UDim2.new(0, 320, 0, 150)
@@ -807,15 +839,14 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     KeySelectFrame.Visible = true
 end)
 
--- Tạo nút bấm chọn gói thử thách quảng cáo lấy Key
-createSelectBtn("Key 2 Tiếng (Qua 20 bảng)", 50, function()
-    startRandomClickChallenge(20, "Normal10", function()
+createSelectBtn("Key 2 Tiếng (Qua 22 bảng - 9 nút)", 50, function()
+    startRandomClickChallenge(22, "Normal10", function()
         generatedNormal10Key = "BACON2H_" .. makeRandomString(8)
         showFinalKeyPopup(generatedNormal10Key)
     end)
 end)
 
-createSelectBtn("Key Vĩnh Viễn (Qua 50 bảng)", 100, function()
+createSelectBtn("Key Vĩnh Viễn (Qua 50 bảng - 9 nút)", 100, function()
     startRandomClickChallenge(50, "Permanent", function()
         showFinalKeyPopup(permanentKey)
     end)
@@ -829,7 +860,7 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     if (generatedNormal10Key ~= "" and entered == generatedNormal10Key) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 7200 -- Gói 2 tiếng (7200 giây)
+        settings.VIP_Status.TimeRemaining = 7200
     elseif (entered == permanentKey) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Permanent"
@@ -846,7 +877,6 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     VIPContent.Visible = true
 end)
 
--- Đồng bộ giao diện lúc chạy Script
 if settings.VIP_Status.IsUnlocked then
     KeyArea.Visible = false
     VIPContent.Visible = true
@@ -855,7 +885,7 @@ else
     VIPContent.Visible = false
 end
 
--- Vòng lặp đếm ngược thời gian thực (Realtime thread)
+-- Vòng lặp đếm ngược thời gian VIP thực
 task.spawn(function()
     while task.wait(1) do
         if settings.VIP_Status.IsUnlocked then
@@ -870,7 +900,7 @@ task.spawn(function()
                     KeyArea.Visible = true
                     VIPContent.Visible = false
                     showTab("Script VIP")
-                    TimeLabel.Text = "VIP Status: Expired (Hết Hạn)"
+                    TimeLabel.Text = "VIP Status: Expired"
                 else
                     local hours = math.floor(s / 3600)
                     local minutes = math.floor((s % 3600) / 60)
@@ -879,12 +909,10 @@ task.spawn(function()
                 end
                 saveVIPData() 
             elseif settings.VIP_Status.KeyType == "Permanent" then
-                TimeLabel.Text = "VIP: Vĩnh Viễn (Permanent)"
-            else
-                TimeLabel.Text = "VIP: Đã Kích Hoạt"
+                TimeLabel.Text = "VIP: Vĩnh Viễn"
             end
         else
-            TimeLabel.Text = "VIP Status: Locked (Chưa khóa)"
+            TimeLabel.Text = "VIP Status: Locked"
         end
     end
 end)
