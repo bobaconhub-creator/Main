@@ -412,27 +412,9 @@ local function addScriptButton(name, x, y, url)
         if not success then warn("Failed to load script "..name..": "..err) end
     end)
 end
-
-createSectionTitle("1. TỐI ƯU & HỖ TRỢ", 10)
 addScriptButton("Fix Lag Hệ Thống", 20, 40, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
-addScriptButton("Bật Hack Bay (Fly)", 210, 40, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
-
-createSectionTitle("2. SCRIPT BLOX FRUIT", 95)
-addScriptButton("Blox Fruit Hub 1", 20, 125, "https://pastefy.app/AjS0TLCt/raw")
+addScriptButton("Blox Fruit Hub", 20, 125, "https://pastefy.app/AjS0TLCt/raw")
 addScriptButton("Turbo Lite Auto", 210, 125, "https://raw.githubusercontent.com/TurboLite/Script/refs/heads/main/MainV2.lua")
-
-createSectionTitle("3. AUTO FARM & LEVEL", 180)
-addScriptButton("Auto Farm Wood", 20, 210, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/wood")
-addScriptButton("Auto Quest Giga", 210, 210, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/quest")
-
-createSectionTitle("4. PVP & TÌM MỤC TIÊU", 265)
-addScriptButton("Aimbot Cam", 20, 295, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/aimbot")
-addScriptButton("Teleport Player", 210, 295, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/teleport")
-
-createSectionTitle("5. TIỆN ÍCH KHÁC", 350)
-addScriptButton("Infinite Yield Admin", 20, 380, "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
-addScriptButton("Rejoin Server", 210, 380, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/rejoin")
-
 -------------------------------------------------
 -- TAB 4: SETTING (CẤU HÌNH THÔNG SỐ)
 local SettingScroll = Tabs["Setting"].Scroll
