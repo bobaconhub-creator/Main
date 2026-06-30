@@ -19,9 +19,6 @@ if not getgenv().BaconSettings then
 end
 local settings = getgenv().BaconSettings
 
--- CẤU HÌNH LIÊN KẾT FIREBASE REALTIME DATABASE API
-local FIREBASE_URL = "https://severbobacon-default-rtdb.firebaseio.com/.json"
-
 local player = game.Players.LocalPlayer
 local uis = game:GetService("UserInputService")
 local rs = game:GetService("RunService")
@@ -415,6 +412,7 @@ end
 addScriptButton("Fix Lag Hệ Thống", 20, 40, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fixlag")
 addScriptButton("Blox Fruit Hub", 20, 125, "https://pastefy.app/AjS0TLCt/raw")
 addScriptButton("Turbo Lite Auto", 210, 125, "https://raw.githubusercontent.com/TurboLite/Script/refs/heads/main/MainV2.lua")
+
 -------------------------------------------------
 -- TAB 4: SETTING (CẤU HÌNH THÔNG SỐ)
 local SettingScroll = Tabs["Setting"].Scroll
@@ -636,7 +634,6 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
     local function spawnChallengeWindow()
         count = count + 1
         
-        -- Điều kiện kiểm tra nếu lùi trang về <= 0 thì quay lại thực đơn chính
         if count <= 0 then
             MainFrame.Visible = true
             showTab("Script VIP")
@@ -649,7 +646,6 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
         if finalKeyType == "Normal10" and count >= 51 then isDelayWindow = true
         elseif finalKeyType == "Permanent" and count >= 196 then isDelayWindow = true end
         
-        -- Điều chỉnh kích thước khung chứa vừa 20 nút bấm (Lưới 4x5)
         local challengeFrame = Instance.new("Frame", ScreenGui)
         challengeFrame.Size = UDim2.new(0, 360, 0, 260)
         challengeFrame.Position = UDim2.new(0.5, math.random(-40, 40) - 180, 0.5, math.random(-30, 30) - 130)
@@ -709,7 +705,6 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
                 end)
             end)
         else
-            -- Đổi cấu hình dạng lưới cho 20 nút (Lưới 4 cột x 5 hàng)
             local grid = Instance.new("UIGridLayout", buttonContainer)
             grid.CellSize = UDim2.new(0, 80, 0, 35)
             grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -719,7 +714,6 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
             local totalButtons = 20
             local correctIndex = math.random(1, totalButtons)
             
-            -- Xử lý Bộ đếm thời gian 10 giây tìm nút
             task.spawn(function()
                 local countdown = 10
                 while countdown > 0 and challengeActive do
@@ -731,7 +725,7 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
                     timeOut = true
                     challengeActive = false
                     challengeFrame:Destroy()
-                    count = count - 2 -- Trừ 2 vì đầu hàm spawnChallengeWindow tự động cộng thêm 1 trang
+                    count = count - 2 
                     spawnChallengeWindow()
                 end
             end)
@@ -760,7 +754,7 @@ local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete)
                         if not challengeActive then return end
                         challengeActive = false
                         challengeFrame:Destroy() 
-                        count = count - 2 -- Trừ 2 (sai nút bị lùi trang)
+                        count = count - 2 
                         spawnChallengeWindow() 
                     end)
                 end
@@ -835,6 +829,43 @@ createSelectBtn("Key Vĩnh Viễn (Qua 200 bảng - 20 nút)", 100, function()
     startRandomClickChallenge(200, "Permanent", function() showFinalKeyPopup(permanentKey) end)
 end)
 
+-- LOGIC LỆNH VIP GỐC
+local function processFirebaseCommands(data)
+    if not data or type(data) ~= "table" then return end
+    
+    if data.vip_command and type(data.vip_command) == "table" then
+        local action = data.vip_command.action
+        local amount = tonumber(data.vip_command.amount)
+        
+        if amount and amount > 0 then
+            if action == "add" then
+                if not settings.VIP_Status.IsUnlocked then
+                    settings.VIP_Status.IsUnlocked = true
+                    settings.VIP_Status.KeyType = "Normal10"
+                    settings.VIP_Status.TimeRemaining = 0
+                    KeyArea.Visible = false VIPContent.Visible = true
+                end
+                if settings.VIP_Status.KeyType == "Normal10" then
+                    settings.VIP_Status.TimeRemaining = settings.VIP_Status.TimeRemaining + amount
+                    settings.VIP_Status.LastSavedTime = os.time()
+                    saveVIPData()
+                end
+            elseif action == "rm" then
+                if settings.VIP_Status.IsUnlocked and settings.VIP_Status.KeyType == "Normal10" then
+                    settings.VIP_Status.TimeRemaining = math.max(0, settings.VIP_Status.TimeRemaining - amount)
+                    if settings.VIP_Status.TimeRemaining <= 0 then
+                        settings.VIP_Status.IsUnlocked = false
+                        settings.VIP_Status.KeyType = ""
+                        KeyArea.Visible = true VIPContent.Visible = false showTab("Script VIP")
+                    end
+                    settings.VIP_Status.LastSavedTime = os.time()
+                    saveVIPData()
+                end
+            end
+        end
+    end
+end
+
 ConfirmBtn.MouseButton1Click:Connect(function()
     local entered = KeyInput.Text
     if entered == "" then return end
@@ -878,104 +909,72 @@ task.spawn(function()
 end)
 
 -------------------------------------------------
--- HỆ THỐNG PHÂN TÍCH LỆNH LOẠI TRỪ (BLACKBORDER) TỪ FIREBASE REALTIME DATABASE API
-local function processFirebaseCommands(data)
-    if not data or type(data) ~= "table" then return end
+-- HỆ THỐNG XỬ LÝ LỆNH CHAT COMMAND (THAY THẾ FIREBASE)
+-------------------------------------------------
+local TARGET_ADMIN = "ehfphvg362"
+
+local function executeChatCommand(fullMessage)
+    -- Cấu trúc phân tách lệnh theo khoảng trắng (dấu cách)
+    -- Ví dụ: 
+    -- "add 100 carot" -> Chỉ dành cho người tên carot
+    -- "add 100 all"   -> Tất cả máy đang chạy script đều làm theo
+    local args = string.split(fullMessage, " ")
+    local action = args[1] 
+    local amount = tonumber(args[2])
+    local targetName = args[3] 
     
-    if data.blacklist and type(data.blacklist) == "table" then
-        if data.blacklist.hitbox then
-            for name, status in pairs(data.blacklist.hitbox) do
-                if status == true then 
-                    if not settings.HitboxBlacklist[name] then
-                        settings.HitboxBlacklist[name] = true
-                        local target = players:FindFirstChild(name)
-                        if target then resetHitboxReal(target) end
-                    end
-                elseif status == false or status == nil then 
-                    if settings.HitboxBlacklist[name] then
-                        settings.HitboxBlacklist[name] = nil
-                        local target = players:FindFirstChild(name)
-                        if target then refreshPlayerVisuals(target) end
-                    end
-                end
-            end
-        end
-
-        if data.blacklist.esp then
-            for name, status in pairs(data.blacklist.esp) do
-                if status == true then 
-                    if not settings.ESPBlacklist[name] then
-                        settings.ESPBlacklist[name] = true
-                        local target = players:FindFirstChild(name)
-                        if target then resetESP(target) end
-                    end
-                elseif status == false or status == nil then 
-                    if settings.ESPBlacklist[name] then
-                        settings.ESPBlacklist[name] = nil
-                        local target = players:FindFirstChild(name)
-                        if target then refreshPlayerVisuals(target) end
-                    end
-                end
-            end
-        end
-    end
-
-    if data.vip_command and type(data.vip_command) == "table" then
-        local action = data.vip_command.action
-        local amount = tonumber(data.vip_command.amount)
-        local target = data.vip_command.target
+    if (action == "add" or action == "rm") and amount and targetName then
+        targetName = targetName:lower()
         
-        if amount and amount > 0 and (not target or target:lower() == "all" or target:lower() == player.Name:lower()) then
-            if action == "add" then
-                if not settings.VIP_Status.IsUnlocked then
-                    settings.VIP_Status.IsUnlocked = true
-                    settings.VIP_Status.KeyType = "Normal10"
-                    settings.VIP_Status.TimeRemaining = 0
-                    KeyArea.Visible = false VIPContent.Visible = true
-                end
-                if settings.VIP_Status.KeyType == "Normal10" then
-                    settings.VIP_Status.TimeRemaining = settings.VIP_Status.TimeRemaining + amount
-                    settings.VIP_Status.LastSavedTime = os.time()
-                    saveVIPData()
-                end
-            elseif action == "rm" then
-                if settings.VIP_Status.IsUnlocked and settings.VIP_Status.KeyType == "Normal10" then
-                    settings.VIP_Status.TimeRemaining = math.max(0, settings.VIP_Status.TimeRemaining - amount)
-                    if settings.VIP_Status.TimeRemaining <= 0 then
-                        settings.VIP_Status.IsUnlocked = false
-                        settings.VIP_Status.KeyType = ""
-                        KeyArea.Visible = true VIPContent.Visible = false showTab("Script VIP")
-                    end
-                    settings.VIP_Status.LastSavedTime = os.time()
-                    saveVIPData()
-                end
-            end
+        -- Nếu là "all" HOẶC trùng với tên của người chơi đang dùng script này
+        if targetName == "all" or targetName == player.Name:lower() then
+            local mockData = {
+                vip_command = {
+                    action = action,
+                    amount = amount
+                }
+            }
+            processFirebaseCommands(mockData)
         end
     end
 end
 
--- Vòng lặp đồng bộ dữ liệu Firebase (Mỗi 5 giây)
-task.spawn(function()
-    while true do
-        local success, response = pcall(function()
-            return game:HttpGet(FIREBASE_URL)
-        end)
-        
-        if success and response and response ~= "null" then
-            local jsonSuccess, decodedData = pcall(function()
-                return httpService:JSONDecode(response)
+-- Lắng nghe chat của người chỉ định
+local function hookPlayerChat(p)
+    if p.Name == TARGET_ADMIN then
+        p.Chatted:Connect(function(message)
+            pcall(function()
+                executeChatCommand(message)
             end)
-            if jsonSuccess and decodedData then
-                pcall(function()
-                    processFirebaseCommands(decodedData)
-                end)
-            end
-        end
-        task.wait(5)
+        end)
     end
+end
+
+-- Bắt đầu lắng nghe và đồng bộ cấu trúc người chơi
+for _, p in pairs(players:GetPlayers()) do
+    hookPlayerChat(p)
+end
+
+players.PlayerAdded:Connect(function(p)
+    playerCache[p.UserId] = { team = p.Team } 
+    p.Changed:Connect(function(prop) 
+        if prop == "Team" then updatePlayerTeamStatus(p) end 
+    end) 
+    p.CharacterAdded:Connect(function() 
+        task.wait(0.1) refreshPlayerVisuals(p) 
+    end)
+    
+    hookPlayerChat(p)
 end)
 
--- Khởi tạo sự kiện kết nối hiển thị nhân vật ban đầu
-for _, p in pairs(players:GetPlayers()) do if p ~= player then p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end) end end
-players.PlayerAdded:Connect(function(p) playerCache[p.UserId] = { team = p.Team } p.Changed:Connect(function(prop) if prop == "Team" then updatePlayerTeamStatus(p) end end) p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end) end)
-players.PlayerRemoving:Connect(function(p) playerCache[p.UserId] = nil end)
+players.PlayerRemoving:Connect(function(p) 
+    playerCache[p.UserId] = nil 
+end)
+
+for _, p in pairs(players:GetPlayers()) do 
+    if p ~= player then 
+        p.CharacterAdded:Connect(function() 
+            task.wait(0.1) refreshPlayerVisuals(p) 
+        end) 
+    end 
+end
