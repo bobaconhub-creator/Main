@@ -1065,7 +1065,7 @@ local CodeLabel = Instance.new("TextLabel", CoinsScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
 CodeLabel.Position = UDim2.new(0, 20, 0, 90)
 CodeLabel.BackgroundTransparency = 1
-CodeLabel.Text = "🎁 NHẬP CODE TÂN THỦ (1 LẦN/MÁY)"
+CodeLabel.Text = "🎁 NHẬP CODE"
 CodeLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
 CodeLabel.Font = Enum.Font.GothamBold
 CodeLabel.TextSize = 12
@@ -1157,7 +1157,7 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     if (generatedNormal10Key ~= "" and entered == generatedNormal10Key) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 1800
+        settings.VIP_Status.TimeRemaining = 3600
     elseif (entered == permanentKey) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Permanent"
