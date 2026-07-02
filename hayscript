@@ -100,7 +100,7 @@ MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 
 -- Thêm hiển thị góc trái Coins:0 coins
 local CoinsLabel = Instance.new("TextLabel", MainFrame)
-CoinsLabel.Size = UDim2.new(0, 100, 0, 20)
+CoinsLabel.Size = UDim2.new(0, 150, 0, 20)
 CoinsLabel.Position = UDim2.new(0, 12, 0, 8)
 CoinsLabel.BackgroundTransparency = 1
 CoinsLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
@@ -710,6 +710,25 @@ local function makeRandomString(length)
     return str
 end
 
+-- Khởi tạo hàm popup thông báo hết tiền
+local function showNoCoinsAlert(message)
+    local alertFrame = Instance.new("Frame", ScreenGui)
+    alertFrame.Size = UDim2.new(0, 260, 0, 100)
+    alertFrame.Position = UDim2.new(0.5, -130, 0.5, -50)
+    alertFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    Instance.new("UICorner", alertFrame).CornerRadius = UDim.new(0, 10)
+    
+    local alertTxt = Instance.new("TextLabel", alertFrame)
+    alertTxt.Size = UDim2.new(1, 0, 1, 0)
+    alertTxt.Text = message
+    alertTxt.TextColor3 = Color3.fromRGB(200, 50, 50)
+    alertTxt.Font = Enum.Font.GothamBold
+    alertTxt.TextSize = 12
+    alertTxt.TextWrapped = true
+    
+    createCloseX(alertFrame, function() alertFrame:Destroy() MainFrame.Visible = true end)
+end
+
 local function startRandomClickChallenge(totalWindows, finalKeyType, onComplete, customTime)
     KeySelectFrame.Visible = false
     OptionFrame.Visible = false
@@ -902,20 +921,30 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     OptionFrame.Visible = false
 end)
 
--- Tạo nút chọn Loại Key
+-- Tạo nút chọn Loại Key (Cập nhật logic trừ Coins & giá PR thành 500,000 coins)
 createSelectBtn("Key Normal", 50, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key Normal"
-    PriceLabel.Text = "Giá Key: 200"
+    PriceLabel.Text = "Giá Key: 200 Coins"
     OptionFrame.Visible = true
     
-    -- Xóa các kết nối cũ của nút bấm phụ
     local buyConn, getConn
     buyConn = BuyBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect() getConn:Disconnect()
         OptionFrame.Visible = false
-        -- Gọi logic mua key ở đây nếu muốn tích hợp thêm hệ thống shop
-        print("Đang xử lý mua Key Normal...")
+        
+        -- Logic Mua Key Normal bằng Coins
+        if settings.Coins >= 200 then
+            settings.Coins = settings.Coins - 200
+            updateCoinsUI()
+            saveVIPData()
+            
+            -- Tạo thẳng mã Key và hiện bảng popup nhận key giống getkey
+            generatedNormal10Key = "BACONhub_" .. makeRandomString(8)
+            showFinalKeyPopup(generatedNormal10Key)
+        else
+            showNoCoinsAlert("Bạn không đủ Coins để mua Key Normal!")
+        end
     end)
     
     getConn = GetKeyRealBtn.MouseButton1Click:Connect(function()
@@ -930,14 +959,25 @@ end)
 createSelectBtn("Key PR", 100, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key PR"
-    PriceLabel.Text = "Giá Key: 500k"
+    PriceLabel.Text = "Giá Key: 500,000 Coins"
     OptionFrame.Visible = true
     
     local buyConn, getConn
     buyConn = BuyBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect() getConn:Disconnect()
         OptionFrame.Visible = false
-        print("Đang xử lý mua Key PR...")
+        
+        -- Logic Mua Key PR bằng Coins (Giá 500,000 xu hệ thống)
+        if settings.Coins >= 500000 then
+            settings.Coins = settings.Coins - 500000
+            updateCoinsUI()
+            saveVIPData()
+            
+            -- Hiện bảng popup nhận key vĩnh viễn trực tiếp
+            showFinalKeyPopup(permanentKey)
+        else
+            showNoCoinsAlert("Bạn không đủ Coins để mua Key PR (Cần 500,000 Coins)!")
+        end
     end)
     
     getConn = GetKeyRealBtn.MouseButton1Click:Connect(function()
