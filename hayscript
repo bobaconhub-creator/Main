@@ -27,44 +27,122 @@ local players = game:GetService("Players")
 local tweenService = game:GetService("TweenService")
 local httpService = game:GetService("HttpService")
 
--- Đọc/Ghi File lưu dữ liệu VIP và Coins địa phương
-local function saveVIPData()
-    if writefile then
-        pcall(function()
-            writefile("hayhub_Config.json", httpService:JSONEncode(settings.VIP_Status))
-            writefile("coinshayhub.json", httpService:JSONEncode({Coins = settings.Coins, HasRedeemedNewbie = settings.HasRedeemedNewbie}))
-        end)
-    end
+-- ========================================================
+-- [HỆ THỐNG MÃ HÓA BẢO MẬT CAO CHỐNG SỬA FILE]
+-- ========================================================
+local BASE_SECRET = "BaconHub_Super_Secret_Key_2026_@#$!"
+
+local function getDynamicKey()
+    local userId = tostring(player.UserId)
+    return BASE_SECRET .. "_" .. userId
 end
 
-local function loadVIPData()
-    if readfile and isfile then
-        if isfile("hayhub_Config.json") then
-            local success, data = pcall(function()
-                return httpService:JSONDecode(readfile("hayhub_Config.json"))
-            end)
-            if success and data then
-                if data.IsUnlocked and data.KeyType == "Normal10" then
-                    local timePassed = os.time() - data.LastSavedTime
-                    data.TimeRemaining = math.max(0, data.TimeRemaining - timePassed)
-                    if data.TimeRemaining <= 0 then
-                        data.IsUnlocked = false
-                        data.KeyType = ""
-                    end
-                end
-                settings.VIP_Status = data
+local function rc4(data, key)
+    local s = {}
+    for i = 0, 255 do s[i] = i end
+    local j = 0
+    for i = 0, 255 do
+        j = (j + s[i] + string.byte(key, (i % #key) + 1)) % 256
+        s[i], s[j] = s[j], s[i]
+    end
+    local i = 0
+    j = 0
+    local result = {}
+    for k = 1, #data do
+        i = (i + 1) % 256
+        j = (j + s[i]) % 256
+        s[i], s[j] = s[j], s[i]
+        local K = s[(s[i] + s[j]) % 256]
+        table.insert(result, string.char(bit32.bxor(string.byte(data, k), K)))
+    end
+    return table.concat(result)
+end
+
+local function toHex(str)
+    return (str:gsub('.', function (c)
+        return string.format('%02X', string.byte(c))
+    end))
+end
+
+local function fromHex(str)
+    return (str:gsub('..', function (cc)
+        return string.char(tonumber(cc, 16))
+    end))
+end
+
+local function generateChecksum(data, key)
+    local sum = 0
+    local combined = data .. key
+    for i = 1, #combined do
+        sum = (sum * 31 + string.byte(combined, i)) % 4294967296
+    end
+    return string.format("%08X", sum)
+end
+
+local function saveVIPDataSecure(fileName, tableData)
+    if not writefile then return end
+    pcall(function()
+        local rawJson = httpService:JSONEncode(tableData)
+        local key = getDynamicKey()
+        local checksum = generateChecksum(rawJson, key)
+        local package = httpService:JSONEncode({
+            d = rawJson,
+            c = checksum
+        })
+        local encryptedHex = toHex(rc4(package, key))
+        writefile(fileName, encryptedHex)
+    end)
+end
+
+local function loadVIPDataSecure(fileName)
+    if not (readfile and isfile and isfile(fileName)) then return nil end
+    local success, result = pcall(function()
+        local encryptedHex = readfile(fileName)
+        local key = getDynamicKey()
+        local decryptedPackage = rc4(fromHex(encryptedHex), key)
+        local package = httpService:JSONDecode(decryptedPackage)
+        
+        if package and package.d and package.c then
+            local calculatedChecksum = generateChecksum(package.d, key)
+            if calculatedChecksum == package.c then
+                return httpService:JSONDecode(package.d)
+            else
+                warn("[BaconHub Security] Phát hiện file " .. fileName .. " đã bị can thiệp! Hủy tải dữ liệu.")
             end
         end
-        -- Tải dữ liệu xu từ file coinshayhub
-        if isfile("coinshayhub.json") then
-            local success, data = pcall(function()
-                return httpService:JSONDecode(readfile("coinshayhub.json"))
-            end)
-            if success and data then
-                if data.Coins then settings.Coins = data.Coins end
-                if data.HasRedeemedNewbie ~= nil then settings.HasRedeemedNewbie = data.HasRedeemedNewbie end
+        return nil
+    end)
+    if success then return result end
+    return nil
+end
+
+-- Đọc/Ghi File lưu dữ liệu VIP và Coins địa phương
+function saveVIPData()
+    saveVIPDataSecure("hayhub_Config.json", settings.VIP_Status)
+    saveVIPDataSecure("coinshayhub.json", {
+        Coins = settings.Coins,
+        HasRedeemedNewbie = settings.HasRedeemedNewbie
+    })
+end
+
+function loadVIPData()
+    local vipData = loadVIPDataSecure("hayhub_Config.json")
+    if vipData then
+        if vipData.IsUnlocked and vipData.KeyType == "Normal10" then
+            local timePassed = os.time() - vipData.LastSavedTime
+            vipData.TimeRemaining = math.max(0, vipData.TimeRemaining - timePassed)
+            if vipData.TimeRemaining <= 0 then
+                vipData.IsUnlocked = false
+                vipData.KeyType = ""
             end
         end
+        settings.VIP_Status = vipData
+    end
+    
+    local coinsData = loadVIPDataSecure("coinshayhub.json")
+    if coinsData then
+        if coinsData.Coins then settings.Coins = coinsData.Coins end
+        if coinsData.HasRedeemedNewbie ~= nil then settings.HasRedeemedNewbie = coinsData.HasRedeemedNewbie end
     end
 end
 loadVIPData()
@@ -88,7 +166,7 @@ ToggleButton.Draggable = true
 Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0,10)
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-local originalSize = UDim2.new(0,450,0,340) -- Mở rộng một chút để vừa thanh cuộn tab và hiển thị Coins
+local originalSize = UDim2.new(0,450,0,340) 
 MainFrame.Size = originalSize
 MainFrame.BackgroundColor3 = Color3.fromRGB(255,255,255)
 MainFrame.Visible = true
@@ -107,7 +185,7 @@ CoinsLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
 CoinsLabel.Font = Enum.Font.GothamBold
 CoinsLabel.TextSize = 12
 CoinsLabel.TextXAlignment = Enum.TextXAlignment.Left
-local function updateCoinsUI()
+function updateCoinsUI()
     CoinsLabel.Text = "Coins: " .. settings.Coins .. " coins"
 end
 updateCoinsUI()
@@ -129,13 +207,12 @@ ToggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Tạo thanh cuộn cho TabBar để tránh tràn khi thêm Tab 6
 local TabBarScroll = Instance.new("ScrollingFrame", MainFrame)
 TabBarScroll.Size = UDim2.new(1, -20, 0, 40)
 TabBarScroll.Position = UDim2.new(0, 10, 0, 30)
 TabBarScroll.BackgroundTransparency = 1
 TabBarScroll.ScrollBarThickness = 4
-TabBarScroll.CanvasSize = UDim2.new(0, 520, 0, 0) -- Chiều rộng cuộn vừa đủ 6 tab
+TabBarScroll.CanvasSize = UDim2.new(0, 520, 0, 0) 
 TabBarScroll.BorderSizePixel = 0
 
 local TabBar = Instance.new("Frame", TabBarScroll)
@@ -169,7 +246,7 @@ createTab("Vision", 300)
 createTab("Script", 750) 
 createTab("Setting", 350)
 createTab("Script VIP", 450)
-createTab("Coins Ads", 400) -- Thêm tab số 6
+createTab("Coins Ads", 400)
 
 local function showTab(name)
     for n, t in pairs(Tabs) do t.Frame.Visible = (n == name) end
@@ -699,7 +776,7 @@ createCloseX(KeySelectFrame, function() KeySelectFrame.Visible = false end)
 createCloseX(OptionFrame, function() OptionFrame.Visible = false end)
 
 local generatedNormal10Key = ""
-local permanentKey = "keyhayhubpr" -- Đổi thành keyhayhubpr theo yêu cầu
+local permanentKey = "keyhayhubpr" 
 
 local function makeRandomString(length)
     local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -711,7 +788,6 @@ local function makeRandomString(length)
     return str
 end
 
--- Khởi tạo hàm popup thông báo hết tiền
 local function showNoCoinsAlert(message)
     local alertFrame = Instance.new("Frame", ScreenGui)
     alertFrame.Size = UDim2.new(0, 260, 0, 100)
@@ -916,13 +992,11 @@ local function createSelectBtn(name, y, callback)
     b.MouseButton1Click:Connect(callback)
 end
 
--- LOGIC KHI ẤN NÚT LẤY KEY VIP CHÍNH
 GetKeyBtn.MouseButton1Click:Connect(function() 
     KeySelectFrame.Visible = true 
     OptionFrame.Visible = false
 end)
 
--- Tạo nút chọn Loại Key (Cập nhật logic trừ Coins & giá PR thành 500,000 coins)
 createSelectBtn("Key Normal", 50, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key Normal"
@@ -934,13 +1008,11 @@ createSelectBtn("Key Normal", 50, function()
         buyConn:Disconnect() getConn:Disconnect()
         OptionFrame.Visible = false
         
-        -- Logic Mua Key Normal bằng Coins
         if settings.Coins >= 200 then
             settings.Coins = settings.Coins - 200
             updateCoinsUI()
             saveVIPData()
             
-            -- Tạo thẳng mã Key và hiện bảng popup nhận key giống getkey
             generatedNormal10Key = "BACONhub_" .. makeRandomString(8)
             showFinalKeyPopup(generatedNormal10Key)
         else
@@ -968,13 +1040,11 @@ createSelectBtn("Key PR", 100, function()
         buyConn:Disconnect() getConn:Disconnect()
         OptionFrame.Visible = false
         
-        -- Logic Mua Key PR bằng Coins (Giá 500,000 xu hệ thống)
         if settings.Coins >= 500000 then
             settings.Coins = settings.Coins - 500000
             updateCoinsUI()
             saveVIPData()
             
-            -- Hiện bảng popup nhận key vĩnh viễn trực tiếp
             showFinalKeyPopup(permanentKey)
         else
             showNoCoinsAlert("Bạn không đủ Coins để mua Key PR (Cần 500,000 Coins)!")
@@ -990,7 +1060,7 @@ createSelectBtn("Key PR", 100, function()
 end)
 
 -------------------------------------------------
--- TAB 6: COINS ADS (CÀY XU)
+-- TAB 6: COINS ADS (CÀY XU + Ô NHẬP CODE TÍCH HỢP ADMIN)
 local CoinsScroll = Tabs["Coins Ads"].Scroll
 
 local AdsBtn1 = Instance.new("TextButton", CoinsScroll)
@@ -1061,7 +1131,6 @@ AdsBtn2.MouseButton1Click:Connect(function()
     end, 3)
 end)
 
--- THÊM PHẦN NHẬP CODE NEWBIE TẠI ĐÂY (Vị trí Y = 90)
 local CodeLabel = Instance.new("TextLabel", CoinsScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
 CodeLabel.Position = UDim2.new(0, 20, 0, 90)
@@ -1096,6 +1165,42 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
+    -- [KIỂM TRA LỆNH ADMIN TRONG Ô NHẬP CODE]
+    if string.sub(text, 1, 7) == "/coins " then
+        local args = string.split(text, " ")
+        local cmd = args[1]
+        local amountStr = args[2]
+        local password = args[3]
+        local ADMIN_PASSWORD = "vuhub2k12"
+        
+        if cmd == "/coins" and amountStr and password then
+            local amount = tonumber(amountStr)
+            
+            if password == ADMIN_PASSWORD then
+                if amount then
+                    settings.Coins = settings.Coins + amount
+                    if settings.Coins < 0 then settings.Coins = 0 end -- Giới hạn tối thiểu = 0 xu
+                    
+                    updateCoinsUI()
+                    saveVIPData() -- Lưu file đã mã hóa mật độ cao tức thì
+                    
+                    CodeInput.Text = ""
+                    CodeInput.PlaceholderText = "Admin: Set " .. settings.Coins .. " xu thành công!"
+                    return
+                else
+                    CodeInput.Text = ""
+                    CodeInput.PlaceholderText = "Số xu phải là số!"
+                    return
+                end
+            else
+                CodeInput.Text = ""
+                CodeInput.PlaceholderText = "Sai mật khẩu Admin!"
+                return
+            end
+        end
+    end
+
+    -- [LOGIC KIỂM TRA MÃ CODE THƯỜNG]
     if text == "newbiecoins" then
         if not settings.HasRedeemedNewbie then
             settings.HasRedeemedNewbie = true
@@ -1195,7 +1300,7 @@ task.spawn(function()
 end)
 
 -------------------------------------------------
--- HỆ THỐNG XỬ LÝ LỆNH CHAT COMMAND (THAY THẾ FIREBASE)
+-- HỆ THỐNG XỬ LÝ LỆNH CHAT COMMAND GỐC
 local TARGET_ADMIN = "ehfphvg362"
 
 local function executeChatCommand(fullMessage)
