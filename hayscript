@@ -30,15 +30,15 @@ local httpService = game:GetService("HttpService")
 local function saveVIPData()
     if writefile then
         pcall(function()
-            writefile("BaconVIP_Config.json", httpService:JSONEncode(settings.VIP_Status))
+            writefile("hayhub_Config.json", httpService:JSONEncode(settings.VIP_Status))
         end)
     end
 end
 
 local function loadVIPData()
-    if readfile and isfile and isfile("BaconVIP_Config.json") then
+    if readfile and isfile and isfile("hayhub_Config.json") then
         local success, data = pcall(function()
-            return httpService:JSONDecode(readfile("BaconVIP_Config.json"))
+            return httpService:JSONDecode(readfile("hayhub_Config.json"))
         end)
         if success and data then
             if data.IsUnlocked and data.KeyType == "Normal10" then
@@ -59,7 +59,7 @@ local playerCache = {}
 
 -- GIAO DIỆN CHÍNH (GUI)
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "BaconPremium"
+ScreenGui.Name = "hayhub"
 
 local ToggleButton = Instance.new("TextButton", ScreenGui)
 ToggleButton.Size = UDim2.new(0,50,0,50)
@@ -873,7 +873,7 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     if (generatedNormal10Key ~= "" and entered == generatedNormal10Key) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 7200
+        settings.VIP_Status.TimeRemaining = 1800
     elseif (entered == permanentKey) then
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Permanent"
@@ -900,7 +900,7 @@ task.spawn(function()
                     KeyArea.Visible = true VIPContent.Visible = false showTab("Script VIP")
                     TimeLabel.Text = "VIP Status: Expired"
                 else
-                    local hours, minutes, seconds = math.floor(s / 3600), math.floor((s % 3600) / 60), s % 60
+                    local hours, minutes, seconds = math.floor(s / 1800), math.floor((s % 1800) / 60), s % 60
                     TimeLabel.Text = string.format("VIP: %02d:%02d:%02d", hours, minutes, seconds)
                 end
                 saveVIPData() 
