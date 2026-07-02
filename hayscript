@@ -14,7 +14,8 @@ if not getgenv().BaconSettings then
             TimeRemaining = 0,
             LastSavedTime = os.time()
         },
-        Coins = 0 -- Thêm thuộc tính lưu Coins vào cài đặt hệ thống
+        Coins = 0, -- Thêm thuộc tính lưu Coins vào cài đặt hệ thống
+        HasRedeemedNewbie = false -- Kiểm tra xem máy đã nhập code newbiecoins chưa
     }
 end
 local settings = getgenv().BaconSettings
@@ -31,7 +32,7 @@ local function saveVIPData()
     if writefile then
         pcall(function()
             writefile("hayhub_Config.json", httpService:JSONEncode(settings.VIP_Status))
-            writefile("coinshayhub.json", httpService:JSONEncode({Coins = settings.Coins}))
+            writefile("coinshayhub.json", httpService:JSONEncode({Coins = settings.Coins, HasRedeemedNewbie = settings.HasRedeemedNewbie}))
         end)
     end
 end
@@ -59,8 +60,9 @@ local function loadVIPData()
             local success, data = pcall(function()
                 return httpService:JSONDecode(readfile("coinshayhub.json"))
             end)
-            if success and data and data.Coins then
-                settings.Coins = data.Coins
+            if success and data then
+                if data.Coins then settings.Coins = data.Coins end
+                if data.HasRedeemedNewbie ~= nil then settings.HasRedeemedNewbie = data.HasRedeemedNewbie end
             end
         end
     end
@@ -1016,6 +1018,59 @@ AdsBtn2.MouseButton1Click:Connect(function()
         MainFrame.Visible = true
         showTab("Coins Ads")
     end, 3)
+end)
+
+-- THÊM PHẦN NHẬP CODE NEWBIE TẠI ĐÂY (Vị trí Y = 90)
+local CodeLabel = Instance.new("TextLabel", CoinsScroll)
+CodeLabel.Size = UDim2.new(0, 370, 0, 20)
+CodeLabel.Position = UDim2.new(0, 20, 0, 90)
+CodeLabel.BackgroundTransparency = 1
+CodeLabel.Text = "🎁 NHẬP CODE TÂN THỦ (1 LẦN/MÁY)"
+CodeLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+CodeLabel.Font = Enum.Font.GothamBold
+CodeLabel.TextSize = 12
+CodeLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local CodeInput = Instance.new("TextBox", CoinsScroll)
+CodeInput.Size = UDim2.new(0, 220, 0, 35)
+CodeInput.Position = UDim2.new(0, 20, 0, 115)
+CodeInput.PlaceholderText = "Nhập mã code tại đây..."
+CodeInput.Text = ""
+CodeInput.TextSize = 12
+CodeInput.Font = Enum.Font.Gotham
+CodeInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+Instance.new("UICorner", CodeInput).CornerRadius = UDim.new(0, 8)
+
+local CodeConfirmBtn = Instance.new("TextButton", CoinsScroll)
+CodeConfirmBtn.Size = UDim2.new(0, 130, 0, 35)
+CodeConfirmBtn.Position = UDim2.new(0, 260, 0, 115)
+CodeConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+CodeConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CodeConfirmBtn.Text = "Xác Nhận"
+CodeConfirmBtn.Font = Enum.Font.GothamBold
+CodeConfirmBtn.TextSize = 12
+Instance.new("UICorner", CodeConfirmBtn).CornerRadius = UDim.new(0, 8)
+
+CodeConfirmBtn.MouseButton1Click:Connect(function()
+    local text = CodeInput.Text
+    if text == "" then return end
+    
+    if text == "newbiecoins" then
+        if not settings.HasRedeemedNewbie then
+            settings.HasRedeemedNewbie = true
+            settings.Coins = settings.Coins + 200
+            updateCoinsUI()
+            saveVIPData()
+            CodeInput.Text = ""
+            CodeInput.PlaceholderText = "Thành công! +200 Coins"
+        else
+            CodeInput.Text = ""
+            CodeInput.PlaceholderText = "Máy này đã nhập code rồi!"
+        end
+    else
+        CodeInput.Text = ""
+        CodeInput.PlaceholderText = "Mã code không hợp lệ!"
+    end
 end)
 
 -------------------------------------------------
