@@ -551,6 +551,7 @@ addVIPScriptButton("Keyboard Escape", 195, 105, "https://raw.githubusercontent.c
 addVIPScriptButton("Become Brainrot", 10, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/BecomeABrainrot")
 addVIPScriptButton("Animal Hospital", 195, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
 addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
+addVIPScriptButton("fly", 195, 205, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
 local KeyArea = Instance.new("Frame", VIP_Scroll)
 KeyArea.Size = UDim2.new(1, 0, 1, 0)
 KeyArea.BackgroundTransparency = 1
@@ -820,7 +821,7 @@ GetKeyBtn.MouseButton1Click:Connect(function() KeySelectFrame.Visible = true end
 
 createSelectBtn("Key 2 Tiếng (Qua 52 bảng - 20 nút)", 50, function()
     startRandomClickChallenge(52, "Normal10", function()
-        generatedNormal10Key = "BACON2H_" .. makeRandomString(8)
+        generatedNormal10Key = "BACONhub_" .. makeRandomString(8)
         showFinalKeyPopup(generatedNormal10Key)
     end)
 end)
@@ -978,3 +979,4 @@ for _, p in pairs(players:GetPlayers()) do
         end) 
     end 
 end
+ 
