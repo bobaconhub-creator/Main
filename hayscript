@@ -550,7 +550,7 @@ addVIPScriptButton("MergeaNuke", 10, 105, "https://raw.githubusercontent.com/gum
 addVIPScriptButton("Keyboard Escape", 195, 105, "https://raw.githubusercontent.com/gumanba/Scripts/main/1SpeedKeyboardBrainrotEscape")
 addVIPScriptButton("Become Brainrot", 10, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/BecomeABrainrot")
 addVIPScriptButton("Animal Hospital", 195, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
-
+addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
 local KeyArea = Instance.new("Frame", VIP_Scroll)
 KeyArea.Size = UDim2.new(1, 0, 1, 0)
 KeyArea.BackgroundTransparency = 1
