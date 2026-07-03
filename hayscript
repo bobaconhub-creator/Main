@@ -16,7 +16,7 @@ if not getgenv().BaconSettings then
         },
         Coins = 0,
         HasRedeemedNewbie = false,
-        RedeemedCodesCount = {} -- Lưu trữ số lần đã nhập của từng mã code
+        RedeemedCodesCount = {}
     }
 end
 local settings = getgenv().BaconSettings
@@ -647,6 +647,14 @@ end
 
 addVIPScriptButton("tp VIP", 10, 50, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
 addVIPScriptButton("99night VIP", 195, 50, "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
+addVIPScriptButton("MergeaNuke", 10, 105, "https://raw.githubusercontent.com/gumanba/Scripts/main/MergeaNuke")
+addVIPScriptButton("Keyboard Escape", 195, 105, "https://raw.githubusercontent.com/gumanba/Scripts/main/1SpeedKeyboardBrainrotEscape")
+addVIPScriptButton("Become Brainrot", 10, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/BecomeABrainrot")
+addVIPScriptButton("Animal Hospital", 195, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
+addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
+addVIPScriptButton("fly", 195, 205, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
+addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fling")
+addVIPScriptButton("evulusoin", 195, 250, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
 
 local KeyArea = Instance.new("Frame", VIP_Scroll)
 KeyArea.Size = UDim2.new(1, 0, 1, 0)
@@ -807,18 +815,17 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     OptionFrame.Visible = false
 end)
 
--- SỬA LẠI GIÁ KEY NORMAL TỪ 200 LÊN 500 COINS TẠI ĐÂY
 createSelectBtn("Key Normal", 50, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key Normal"
-    PriceLabel.Text = "Giá Key: 500 Coins"  -- Sửa từ 200 thành 500
+    PriceLabel.Text = "Giá Key: 500 Coins"
     OptionFrame.Visible = true
     local buyConn, getConn
     buyConn = BuyBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect()
         getConn:Disconnect()
         OptionFrame.Visible = false
-        if settings.Coins >= 500 then -- Sửa check điều kiện xu từ 200 lên 500
+        if settings.Coins >= 500 then
             settings.Coins = settings.Coins - 500
             updateCoinsUI()
             saveVIPData()
@@ -840,15 +847,15 @@ end)
 createSelectBtn("Key PR", 100, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key PR"
-    PriceLabel.Text = "Giá Key: 1000 Coins"
+    PriceLabel.Text = "Giá Key: 500000 Coins"
     OptionFrame.Visible = true
     local buyConn, getConn
     buyConn = BuyBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect()
         getConn:Disconnect()
         OptionFrame.Visible = false
-        if settings.Coins >= 1000 then
-            settings.Coins = settings.Coins - 1000
+        if settings.Coins >= 500000 then
+            settings.Coins = settings.Coins - 500000
             updateCoinsUI()
             saveVIPData()
             generatedPrKey = "BACONhubPR_" .. makeRandomString(8)
@@ -904,7 +911,7 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- TAB 6: COINS ADS & MINIGAME SO SÁNH SỐ
+-- TAB 6: COINS ADS & MINIGAMES
 local CoinsScroll = Tabs["Coins Ads"].Scroll
 
 local MinigameBtn = Instance.new("TextButton", CoinsScroll)
@@ -1060,11 +1067,147 @@ MinigameBtn.MouseButton1Click:Connect(function()
     nextRound()
 end)
 
+local LetterGameBtn = Instance.new("TextButton", CoinsScroll)
+LetterGameBtn.Size = UDim2.new(0, 180, 0, 40)
+LetterGameBtn.Position = UDim2.new(0, 210, 0, 20)
+LetterGameBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
+LetterGameBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+LetterGameBtn.Text = "Chọn theo chữ"
+LetterGameBtn.Font = Enum.Font.GothamBold
+LetterGameBtn.TextSize = 12
+Instance.new("UICorner", LetterGameBtn).CornerRadius = UDim.new(0, 10)
+
+LetterGameBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    
+    local GameFrame = Instance.new("Frame", ScreenGui)
+    GameFrame.Size = UDim2.new(0, 360, 0, 240)
+    GameFrame.Position = UDim2.new(0.5, -180, 0.5, -120)
+    GameFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    Instance.new("UICorner", GameFrame).CornerRadius = UDim.new(0, 12)
+    
+    local GameTitle = Instance.new("TextLabel", GameFrame)
+    GameTitle.Size = UDim2.new(1, 0, 0, 35)
+    GameTitle.Text = "TRÒ CHƠI CHỌN CHỮ CÁI"
+    GameTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+    GameTitle.Font = Enum.Font.GothamBold
+    GameTitle.TextSize = 14
+    GameTitle.BackgroundTransparency = 1
+    
+    local MatchLabel = Instance.new("TextLabel", GameFrame)
+    MatchLabel.Size = UDim2.new(1, 0, 0, 25)
+    MatchLabel.Position = UDim2.new(0, 0, 0, 35)
+    MatchLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MatchLabel.Font = Enum.Font.Gotham
+    MatchLabel.TextSize = 13
+    MatchLabel.BackgroundTransparency = 1
+    
+    local TargetLetterLabel = Instance.new("TextLabel", GameFrame)
+    TargetLetterLabel.Size = UDim2.new(0, 100, 0, 55)
+    TargetLetterLabel.Position = UDim2.new(0.5, -50, 0, 70)
+    TargetLetterLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    TargetLetterLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+    TargetLetterLabel.Font = Enum.Font.GothamBold
+    TargetLetterLabel.TextSize = 36
+    Instance.new("UICorner", TargetLetterLabel).CornerRadius = UDim.new(0, 8)
+    
+    local alphabet = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"}
+    local winStreak = 0
+    local correctLetter = ""
+    local isRoundActive = false
+    
+    local function shuffleChoices()
+        local choices = {correctLetter}
+        while #choices < 3 do
+            local randomLetter = alphabet[math.random(1, #alphabet)]
+            local isDuplicate = false
+            for _, v in pairs(choices) do
+                if v == randomLetter then isDuplicate = true break end
+            end
+            if not isDuplicate then table.insert(choices, randomLetter) end
+        end
+        for i = #choices, 2, -1 do
+            local j = math.random(1, i)
+            choices[i], choices[j] = choices[j], choices[i]
+        end
+        return choices
+    end
+    
+    local Btn1 = Instance.new("TextButton", GameFrame)
+    local Btn2 = Instance.new("TextButton", GameFrame)
+    local Btn3 = Instance.new("TextButton", GameFrame)
+    
+    local function initButtons(btn, xPos)
+        btn.Size = UDim2.new(0, 80, 0, 40)
+        btn.Position = UDim2.new(0, xPos, 0, 150)
+        btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 18
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    end
+    initButtons(Btn1, 25)
+    initButtons(Btn2, 140)
+    initButtons(Btn3, 255)
+    
+    local function nextRound()
+        if not GameFrame or not GameFrame.Parent then return end
+        correctLetter = alphabet[math.random(1, #alphabet)]
+        TargetLetterLabel.Text = correctLetter
+        TargetLetterLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+        MatchLabel.Text = "Tiến trình: " .. winStreak .. "/10 trận thắng"
+        
+        local choices = shuffleChoices()
+        Btn1.Text = choices[1]
+        Btn2.Text = choices[2]
+        Btn3.Text = choices[3]
+        isRoundActive = true
+    end
+    
+    local function checkAnswer(btn)
+        if not isRoundActive then return end
+        isRoundActive = false
+        
+        if btn.Text == correctLetter then
+            winStreak = winStreak + 1
+            TargetLetterLabel.Text = "✔"
+            TargetLetterLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            if winStreak >= 10 then
+                settings.Coins = settings.Coins + 40
+                updateCoinsUI()
+                saveVIPData()
+                winStreak = 0
+                MatchLabel.Text = "Tuyệt vời! Bạn nhận được +40 Xu!"
+                task.wait(1.2)
+            else
+                task.wait(0.6)
+            end
+        else
+            winStreak = 0
+            TargetLetterLabel.Text = "✘"
+            TargetLetterLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+            task.wait(0.8)
+        end
+        nextRound()
+    end
+    
+    Btn1.MouseButton1Click:Connect(function() checkAnswer(Btn1) end)
+    Btn2.MouseButton1Click:Connect(function() checkAnswer(Btn2) end)
+    Btn3.MouseButton1Click:Connect(function() checkAnswer(Btn3) end)
+    
+    createCloseX(GameFrame, function()
+        GameFrame:Destroy()
+        MainFrame.Visible = true
+    end)
+    
+    nextRound()
+end)
+
 local CodeLabel = Instance.new("TextLabel", CoinsScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
 CodeLabel.Position = UDim2.new(0, 20, 0, 90)
 CodeLabel.BackgroundTransparency = 1
-CodeLabel.Text = "🎁 NHẬP MÃ ĐỔI THƯỞNG / ADMIN"
+CodeLabel.Text = "🎁 NHẬP MÃ ĐỔI THƯỞNG"
 CodeLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
 CodeLabel.Font = Enum.Font.GothamBold
 CodeLabel.TextSize = 13
@@ -1089,19 +1232,16 @@ GiftBtn.Font = Enum.Font.GothamBold
 GiftBtn.TextSize = 13
 Instance.new("UICorner", GiftBtn).CornerRadius = UDim.new(0, 8)
 
--- THAY THẾ KIỂM TRA CHECK CODE ONLINE TỪ LINK GITHUB & LỆNH ADMIN /COINS
 GiftBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    -- Xử lý lệnh Admin độc lập (vẫn giữ nguyên điều kiện)
     if string.sub(text, 1, 7) == "/coins " then
         local remainder = string.sub(text, 8)
         local args = string.split(remainder, " ")
         local amount = tonumber(args[1])
         local pass = args[2] or (args[3] and args[2] .. " " .. args[3]) or ""
         
-        -- Nếu nhập đúng cú pháp password là vuhub2k12
         if amount and (string.find(text, "vuhub2k12") or pass:lower() == "vuhub2k12") then
             settings.Coins = settings.Coins + amount
             updateCoinsUI()
@@ -1112,7 +1252,6 @@ GiftBtn.MouseButton1Click:Connect(function()
         end
     end
     
-    -- Check mã Code động từ Link GitHub
     local success, content = pcall(function()
         return game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/Code")
     end)
@@ -1196,7 +1335,6 @@ local function refreshCodeListTab7()
                 local maxUses = parts[3] or "1"
                 local showStatus = parts[4] or "false"
                 
-                -- Loại bỏ khoảng cách thừa để check chính xác true/false
                 showStatus = string.gsub(showStatus, " ", ""):lower()
                 
                 if showStatus == "true" then
@@ -1227,8 +1365,6 @@ local function refreshCodeListTab7()
     end
 end
 
--- Tự động cập nhật danh sách code khi chuyển qua xem Tab 7
-TabBar:GetChildren()
 for _, b in pairs(TabBar:GetChildren()) do
     if b:IsA("TextButton") and b.Text == "Code Mới Nhất" then
         b.MouseButton1Click:Connect(function()
@@ -1291,16 +1427,26 @@ for _, p in pairs(players:GetPlayers()) do
 end
 
 players.PlayerAdded:Connect(function(p)
-    playerCache[p.UserId] = { team = p.Team } 
-    p.Changed:Connect(function(prop) 
-        if prop == "Team" then updatePlayerTeamStatus(p) end 
-    end) 
-    p.CharacterAdded:Connect(function() 
-        task.wait(0.1) refreshPlayerVisuals(p) 
+    playerCache[p.UserId] = { team = p.Team }
+    p.Changed:Connect(function(prop)
+        if prop == "Team" then updatePlayerTeamStatus(p) end
+    end)
+    p.CharacterAdded:Connect(function()
+        task.wait(0.1)
+        refreshPlayerVisuals(p)
     end)
     hookPlayerChat(p)
 end)
 
-players.PlayerRemoving:Connect(function(p) 
-    playerCache[p.UserId] = nil 
+players.PlayerRemoving:Connect(function(p)
+    playerCache[p.UserId] = nil
 end)
+
+for _, p in pairs(players:GetPlayers()) do
+    if p ~= player then
+        p.CharacterAdded:Connect(function()
+            task.wait(0.1)
+            refreshPlayerVisuals(p)
+        end)
+    end
+end
