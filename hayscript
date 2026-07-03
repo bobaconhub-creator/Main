@@ -659,7 +659,7 @@ addVIPScriptButton("Become Brainrot", 10, 160, "https://raw.githubusercontent.co
 addVIPScriptButton("Animal Hospital", 195, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
 addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
 addVIPScriptButton("fly", 195, 205, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
-addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/example-prog/FLING-THINGS-AND-PEOPLE/refs/heads/main/Flingthingsandpeoplescript")
+addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fling")
 addVIPScriptButton("evulusoin", 195, 250, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
 
 local KeyArea = Instance.new("Frame", VIP_Scroll)
