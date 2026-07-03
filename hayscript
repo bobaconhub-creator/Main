@@ -607,7 +607,7 @@ healthBtn.MouseButton1Click:Connect(function()
 end)
 
 -- =============================================================================
--- TAB 5: SCRIPT VIP (HỆ THỐNG KEY CỐ ĐỊNH + CLIPBOARD)
+-- TAB 5: SCRIPT VIP (HỆ THỐNG KEY BẢO MẬT)
 -- =============================================================================
 local VIP_Scroll = Tabs["Script VIP"].Scroll
 
@@ -661,6 +661,7 @@ addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanb
 addVIPScriptButton("fly", 195, 205, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
 addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/example-prog/FLING-THINGS-AND-PEOPLE/refs/heads/main/Flingthingsandpeoplescript")
 addVIPScriptButton("evulusoin", 195, 250, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
+
 local KeyArea = Instance.new("Frame", VIP_Scroll)
 KeyArea.Size = UDim2.new(1, 0, 1, 0)
 KeyArea.BackgroundTransparency = 1
@@ -674,7 +675,6 @@ KeyInput.TextSize = 12
 KeyInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 Instance.new("UICorner", KeyInput).CornerRadius = UDim.new(0, 8)
 
--- NÚT DÁN KEY KẾ BÊN Ô NHẬP KEY
 local PasteKeyBtn = Instance.new("TextButton", KeyArea)
 PasteKeyBtn.Size = UDim2.new(0, 45, 0, 40)
 PasteKeyBtn.Position = UDim2.new(0.5, 40, 0, 20)
@@ -689,7 +689,6 @@ PasteKeyBtn.MouseButton1Click:Connect(function()
     if getclipboard then KeyInput.Text = getclipboard() end
 end)
 
--- NÚT SAO CHÉP NỘI DUNG TRONG Ô NHẬP
 local CopyKeyBtn = Instance.new("TextButton", KeyArea)
 CopyKeyBtn.Size = UDim2.new(0, 45, 0, 40)
 CopyKeyBtn.Position = UDim2.new(0.5, 90, 0, 20)
@@ -729,7 +728,6 @@ GetKeyBtn.Font = Enum.Font.GothamBold
 GetKeyBtn.TextSize = 14
 Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
 
--- BẢNG CHỌN LOẠI KEY PR / NORMAL
 local KeySelectFrame = Instance.new("Frame", ScreenGui)
 KeySelectFrame.Size = UDim2.new(0, 300, 0, 160)
 KeySelectFrame.Position = UDim2.new(0.5, -150, 0.5, -80)
@@ -744,7 +742,6 @@ SelectTitle.Font = Enum.Font.GothamBold
 SelectTitle.TextSize = 14
 SelectTitle.TextColor3 = Color3.fromRGB(0, 0, 0)
 
--- BẢNG PHỤ XỬ LÝ MUA/GET KEY
 local OptionFrame = Instance.new("Frame", ScreenGui)
 OptionFrame.Size = UDim2.new(0, 320, 0, 180)
 OptionFrame.Position = UDim2.new(0.5, -160, 0.5, -90)
@@ -801,8 +798,23 @@ end
 createCloseX(KeySelectFrame, function() KeySelectFrame.Visible = false end)
 createCloseX(OptionFrame, function() OptionFrame.Visible = false end)
 
-local generatedNormal10Key = "hayhub2h" -- Đặt mã Normal cố định theo yêu cầu
+-- =============================================================================
+-- LOGIC TẠO KEY RANDOM VÀ MASTER KEY ADMIN
+-- =============================================================================
+local adminMasterKey = "hayhub2h"
 local permanentKey = "keyhayhubpr"
+local currentGeneratedNormalKey = "" -- Biến tạm lưu key random vừa tạo ra
+
+local function generateRandomKey()
+    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local length = math.random(10, 15)
+    local randomKey = "hayhub_"
+    for i = 1, length do
+        local rand = math.random(1, #chars)
+        randomKey = randomKey .. string.sub(chars, rand, rand)
+    end
+    return randomKey
+end
 
 local function showNoCoinsAlert(message)
     local alertFrame = Instance.new("Frame", ScreenGui)
@@ -1026,7 +1038,8 @@ createSelectBtn("Key Normal", 50, function()
         if settings.Coins >= 500 then
             settings.Coins = settings.Coins - 500
             updateCoinsUI() saveVIPData()
-            showFinalKeyPopup(generatedNormal10Key)
+            currentGeneratedNormalKey = generateRandomKey() -- Sinh ngẫu nhiên
+            showFinalKeyPopup(currentGeneratedNormalKey)
         else
             showNoCoinsAlert("Bạn không đủ Coins để mua Key Normal!")
         end
@@ -1035,7 +1048,8 @@ createSelectBtn("Key Normal", 50, function()
     getConn = GetKeyRealBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect() getConn:Disconnect()
         startRandomClickChallenge(52, "Normal10", function()
-            showFinalKeyPopup(generatedNormal10Key)
+            currentGeneratedNormalKey = generateRandomKey() -- Sinh ngẫu nhiên
+            showFinalKeyPopup(currentGeneratedNormalKey)
         end)
     end)
 end)
@@ -1235,7 +1249,7 @@ GameBtn2.MouseButton1Click:Connect(function()
     createLeftCloseX(wordFrame, function() wordFrame:Destroy() MainFrame.Visible = true end)
 end)
 
--- VÙNG NHẬP CODE (Vị trí Y = 90)
+-- VÙNG NHẬP CODE
 local CodeLabel = Instance.new("TextLabel", CoinsScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
 CodeLabel.Position = UDim2.new(0, 20, 0, 90)
@@ -1270,7 +1284,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    -- LỆNH ĐẶC BIỆT THAY ĐỔI XU TRỰC TIẾP TRÊN Ô NHẬP CODE
     local secretAmount, operation = string.match(text, "^/coins%s+(%d+)%s*([%+%-])%s*vuhub2k12")
     if not secretAmount then
         secretAmount, operation = string.match(text, "^/coins%s+(%d+)%s*vuhub2k12%s*([%+%-])")
@@ -1285,7 +1298,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
         return
     end
     
-    -- LOGIC CHECK CODE ONLINE TỪ GITHUB
     local success, response = pcall(function()
         return game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/Code")
     end)
@@ -1385,7 +1397,37 @@ end
 task.spawn(refreshTab7List)
 
 -- =============================================================================
--- LOGIC LỆNH ADMIN CHAT COMMANDS & KHỞI CHẠY HỆ THỐNG GỐC
+-- LOGIC KIỂM TRA KEY KHI BẤM "XÁC NHẬN"
+-- =============================================================================
+ConfirmBtn.MouseButton1Click:Connect(function()
+    local entered = KeyInput.Text
+    if entered == "" then return end
+    
+    -- Kiểm tra nếu nhập trúng key random được tạo ra
+    if currentGeneratedNormalKey ~= "" and entered == currentGeneratedNormalKey then
+        settings.VIP_Status.IsUnlocked = true
+        settings.VIP_Status.KeyType = "Normal10"
+        settings.VIP_Status.TimeRemaining = 7200 -- Key random cho 2 tiếng
+    -- Kiểm tra nếu nhập trúng key Master của Admin
+    elseif entered == adminMasterKey then
+        settings.VIP_Status.IsUnlocked = true
+        settings.VIP_Status.KeyType = "Normal10"
+        settings.VIP_Status.TimeRemaining = 7200 -- Admin dùng thoải mái 2 tiếng
+    -- Kiểm tra key Vĩnh Viễn
+    elseif entered == permanentKey then
+        settings.VIP_Status.IsUnlocked = true
+        settings.VIP_Status.KeyType = "Permanent"
+        settings.VIP_Status.TimeRemaining = 99999999
+    else
+        KeyInput.Text = "" KeyInput.PlaceholderText = "Sai Key! Vui lòng thử lại..." return
+    end
+    
+    settings.VIP_Status.LastSavedTime = os.time()
+    saveVIPData() KeyArea.Visible = false VIPContent.Visible = true
+end)
+
+-- =============================================================================
+-- LỆNH CHAT COMMANDS & KHỞI CHẠY HỆ THỐNG GỐC
 -- =============================================================================
 local function processFirebaseCommands(data)
     if not data or type(data) ~= "table" then return end
@@ -1417,24 +1459,6 @@ local function processFirebaseCommands(data)
         end
     end
 end
-
-ConfirmBtn.MouseButton1Click:Connect(function()
-    local entered = KeyInput.Text
-    if entered == "" then return end
-    if entered == generatedNormal10Key then
-        settings.VIP_Status.IsUnlocked = true
-        settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 7200 -- 2 tiếng (7200 giây) cho key hayhub2h
-    elseif entered == permanentKey then
-        settings.VIP_Status.IsUnlocked = true
-        settings.VIP_Status.KeyType = "Permanent"
-        settings.VIP_Status.TimeRemaining = 99999999
-    else
-        KeyInput.Text = "" KeyInput.PlaceholderText = "Sai Key! Vui lòng thử lại..." return
-    end
-    settings.VIP_Status.LastSavedTime = os.time()
-    saveVIPData() KeyArea.Visible = false VIPContent.Visible = true
-end)
 
 if settings.VIP_Status.IsUnlocked then KeyArea.Visible = false VIPContent.Visible = true
 else KeyArea.Visible = true VIPContent.Visible = false end
