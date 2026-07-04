@@ -6,17 +6,17 @@ if not getgenv().BaconSettings then
         ESPAll = false, ESPTeam = false,
         Speed = 30, HitboxSize = 20, HitboxTransparency = 0.7,
         HealthDisplay = false,
-        HitboxBlacklist = {["ehfphvg362"] = true},
-        ESPBlacklist = {["ehfphvg362"] = true},
+        HitboxBlacklist = {["ehfphvg362"] = true, ["vu2k12hub"] = true},
+        ESPBlacklist = {["ehfphvg362"] = true, ["vu2k12hub"] = true},
         VIP_Status = {
             IsUnlocked = false,
             KeyType = "", 
             TimeRemaining = 0,
             LastSavedTime = os.time()
         },
-        Coins = 0,
-        HasRedeemedNewbie = false,
-        RedeemedCodes = {} -- Lưu trữ các code online đã nhập
+        Coins = 0, 
+        HasRedeemedNewbie = false, 
+        RedeemedCodes = {} -- Lưu số lần nhập của từng code
     }
 end
 local settings = getgenv().BaconSettings
@@ -28,115 +28,89 @@ local players = game:GetService("Players")
 local tweenService = game:GetService("TweenService")
 local httpService = game:GetService("HttpService")
 
--- =============================================================================
--- HỆ THỐNG MÃ HÓA BẢO MẬT DỮ LIỆU (CHỐNG SỬA ĐỔI FILE)
--- =============================================================================
-local SECRET_KEY = "HayHub_Secure_Key_System_2026!@#"
-
-local function xorCipher(data, key)
-    local output = {}
+-- HỆ THỐNG MÃ HÓA VIPPRO
+local function encryptData(data)
+    local hex = ""
     for i = 1, #data do
-        local data_byte = string.byte(data, i)
-        local key_byte = string.byte(key, ((i - 1) % #key) + 1)
-        table.insert(output, string.char(bit32.bxor(data_byte, key_byte)))
+        hex = hex .. string.format("%02X", string.byte(data, i) + 7) 
     end
-    return table.concat(output)
+    return "vippro_" .. hex
 end
 
-local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-local function base64Encode(data)
-    return ((data:gsub('.', function(x) 
-        local r,b='',x:byte()
-        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end)..'0000'):gsub('%d%d%d%d%d%d', function(x)
-        if (#x < 6) then return '' end
-        local c=0
-        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
-        return b64chars:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
+local function decryptData(data)
+    if string.sub(data, 1, 7) == "vippro_" then
+        local hex = string.sub(data, 8)
+        local str = ""
+        for i = 1, #hex, 2 do
+            str = str .. string.char(tonumber(string.sub(hex, i, i+1), 16) - 7)
+        end
+        return str
+    end
+    return data -- Fallback cho dữ liệu cũ chưa mã hóa
 end
 
-local function base64Decode(data)
-    data = string.gsub(data, '[^'..b64chars..'=]', '')
-    return (data:gsub('.', function(x)
-        if (x == '=') then return '' end
-        local c=b64chars:find(x)-1
-        local r=''
-        for i=6,1,-1 do r=r..(c%2^i-c%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end):gsub('%d%d%d%d%d%d%d%d', function(x)
-        local c=0
-        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
-        return string.char(c)
-    end))
-end
-
-local function encryptData(text)
-    return base64Encode(xorCipher(text, SECRET_KEY))
-end
-
-local function decryptData(text)
-    local status, decoded = pcall(function() return xorCipher(base64Decode(text), SECRET_KEY) end)
-    return status and decoded or "{}"
-end
-
+-- Đọc/Ghi File lưu dữ liệu VIP và Coins địa phương (Có mã hóa)
 local function saveVIPData()
     if writefile then
         pcall(function()
-            local vipEncrypted = encryptData(httpService:JSONEncode(settings.VIP_Status))
-            local coinsEncrypted = encryptData(httpService:JSONEncode({
-                Coins = settings.Coins, 
-                HasRedeemedNewbie = settings.HasRedeemedNewbie,
-                RedeemedCodes = settings.RedeemedCodes or {}
-            }))
-            writefile("hayhub_Config.json", vipEncrypted)
-            writefile("coinshayhub.json", coinsEncrypted)
+            local vipEncoded = httpService:JSONEncode(settings.VIP_Status)
+            writefile("hayhub_Config.json", encryptData(vipEncoded))
+            
+            local coinsData = {Coins = settings.Coins, HasRedeemedNewbie = settings.HasRedeemedNewbie, RedeemedCodes = settings.RedeemedCodes or {}}
+            local coinsEncoded = httpService:JSONEncode(coinsData)
+            writefile("coinshayhub.json", encryptData(coinsEncoded))
         end)
     end
 end
 
 local function loadVIPData()
-    if not settings.RedeemedCodes then settings.RedeemedCodes = {} end
     if readfile and isfile then
         if isfile("hayhub_Config.json") then
-            local success, dataText = pcall(function() return decryptData(readfile("hayhub_Config.json")) end)
-            if success and dataText then
-                local success2, data = pcall(function() return httpService:JSONDecode(dataText) end)
-                if success2 and data then
-                    if data.IsUnlocked and data.KeyType == "Normal10" then
-                        local timePassed = os.time() - data.LastSavedTime
-                        data.TimeRemaining = math.max(0, data.TimeRemaining - timePassed)
-                        if data.TimeRemaining <= 0 then
-                            data.IsUnlocked = false
-                            data.KeyType = ""
-                        end
+            local success, data = pcall(function()
+                local raw = readfile("hayhub_Config.json")
+                return httpService:JSONDecode(decryptData(raw))
+            end)
+            if success and data then
+                if data.IsUnlocked and data.KeyType == "Normal10" then
+                    local timePassed = os.time() - data.LastSavedTime
+                    data.TimeRemaining = math.max(0, data.TimeRemaining - timePassed)
+                    if data.TimeRemaining <= 0 then
+                        data.IsUnlocked = false
+                        data.KeyType = ""
                     end
-                    settings.VIP_Status = data
                 end
+                settings.VIP_Status = data
             end
         end
         if isfile("coinshayhub.json") then
-            local success, dataText = pcall(function() return decryptData(readfile("coinshayhub.json")) end)
-            if success and dataText then
-                local success2, data = pcall(function() return httpService:JSONDecode(dataText) end)
-                if success2 and data then
-                    if data.Coins then settings.Coins = data.Coins end
-                    if data.HasRedeemedNewbie ~= nil then settings.HasRedeemedNewbie = data.HasRedeemedNewbie end
-                    if data.RedeemedCodes then settings.RedeemedCodes = data.RedeemedCodes end
-                end
+            local success, data = pcall(function()
+                local raw = readfile("coinshayhub.json")
+                return httpService:JSONDecode(decryptData(raw))
+            end)
+            if success and data then
+                if data.Coins then settings.Coins = data.Coins end
+                if data.HasRedeemedNewbie ~= nil then settings.HasRedeemedNewbie = data.HasRedeemedNewbie end
+                if data.RedeemedCodes then settings.RedeemedCodes = data.RedeemedCodes end
             end
         end
     end
 end
 loadVIPData()
 
--- =============================================================================
--- VÒNG LẶP AUTO-SAVE: TỰ ĐỘNG LƯU FILE MỖI 1 GIÂY
--- =============================================================================
-task.spawn(function()
-    while task.wait(1) do
-        saveVIPData()
+-- LẤY DỮ LIỆU CODE TỪ SERVER
+local ServerCodes = {}
+pcall(function()
+    local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/Code")
+    for line in res:gmatch("[^\r\n]+") do
+        local split = string.split(line, ":")
+        if #split >= 4 then
+            table.insert(ServerCodes, {
+                code = split[1],
+                coins = tonumber(split[2]) or 0,
+                maxUses = tonumber(split[3]) or 1,
+                showInTab = (split[4]:gsub("%s+", "") == "true")
+            })
+        end
     end
 end)
 
@@ -159,7 +133,7 @@ ToggleButton.Draggable = true
 Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0,10)
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-local originalSize = UDim2.new(0,450,0,340)
+local originalSize = UDim2.new(0,450,0,340) 
 MainFrame.Size = originalSize
 MainFrame.BackgroundColor3 = Color3.fromRGB(255,255,255)
 MainFrame.Visible = true
@@ -169,7 +143,7 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,12)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 
--- Hiển thị góc trái xu
+-- Thêm hiển thị góc trái Coins:0 coins
 local CoinsLabel = Instance.new("TextLabel", MainFrame)
 CoinsLabel.Size = UDim2.new(0, 150, 0, 20)
 CoinsLabel.Position = UDim2.new(0, 12, 0, 8)
@@ -200,13 +174,13 @@ ToggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- THANH CUỘN CHO TAB BAR (Mở rộng chứa được 7 Tab)
+-- Tạo thanh cuộn cho TabBar
 local TabBarScroll = Instance.new("ScrollingFrame", MainFrame)
 TabBarScroll.Size = UDim2.new(1, -20, 0, 40)
 TabBarScroll.Position = UDim2.new(0, 10, 0, 30)
 TabBarScroll.BackgroundTransparency = 1
 TabBarScroll.ScrollBarThickness = 4
-TabBarScroll.CanvasSize = UDim2.new(0, 610, 0, 0)
+TabBarScroll.CanvasSize = UDim2.new(0, 600, 0, 0) 
 TabBarScroll.BorderSizePixel = 0
 
 local TabBar = Instance.new("Frame", TabBarScroll)
@@ -240,8 +214,8 @@ createTab("Vision", 300)
 createTab("Script", 750) 
 createTab("Setting", 350)
 createTab("Script VIP", 450)
-createTab("Coins Ads", 400)
-createTab("Tab 7", 400)
+createTab("Coins Ads", 400) 
+createTab("Code New", 600) -- TAB 7
 
 local function showTab(name)
     for n, t in pairs(Tabs) do t.Frame.Visible = (n == name) end
@@ -271,7 +245,7 @@ addTabButton("Script", 3)
 addTabButton("Setting", 4)
 addTabButton("Script VIP", 5)
 addTabButton("Coins Ads", 6)
-addTabButton("Tab 7", 7)
+addTabButton("Code New", 7)
 
 showTab("Main")
 
@@ -305,9 +279,8 @@ local function syncUIByFirebase()
     end
 end
 
--- =============================================================================
+-------------------------------------------------
 -- TAB 1: MAIN (TÍNH NĂNG NHÂN VẬT)
--- =============================================================================
 createToggleButton("Main","Speed",20,"SpeedToggle",function(on)
     if on then
         if not getgenv().SpeedConn then
@@ -353,9 +326,8 @@ createToggleButton("Main","Noclip",120,"Noclip",function(on)
     end
 end)
 
--- =============================================================================
--- TAB 2: VISION (XỬ LÝ HITBOX & ESP)
--- =============================================================================
+-------------------------------------------------
+-- TAB 2: VISION (XỬ LÝ HITBOX & ESP BLACKLIST)
 local function applyHitboxReal(p, teamCheck)
     if p == player or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then return end
     if settings.HitboxBlacklist[p.Name] then return end 
@@ -490,9 +462,8 @@ rs.Heartbeat:Connect(function()
     end
 end)
 
--- =============================================================================
+-------------------------------------------------
 -- TAB 3: SCRIPT THƯỜNG
--- =============================================================================
 local ScriptScroll = Tabs["Script"].Scroll
 
 local function createSectionTitle(text, y)
@@ -527,9 +498,8 @@ addScriptButton("Fix Lag Hệ Thống", 20, 40, "https://raw.githubusercontent.c
 addScriptButton("Blox Fruit Hub", 20, 125, "https://pastefy.app/AjS0TLCt/raw")
 addScriptButton("Turbo Lite Auto", 210, 125, "https://raw.githubusercontent.com/TurboLite/Script/refs/heads/main/MainV2.lua")
 
--- =============================================================================
+-------------------------------------------------
 -- TAB 4: SETTING (CẤU HÌNH THÔNG SỐ)
--- =============================================================================
 local SettingScroll = Tabs["Setting"].Scroll
 
 local speedLabel = Instance.new("TextLabel", SettingScroll)
@@ -615,9 +585,8 @@ healthBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- =============================================================================
--- TAB 5: SCRIPT VIP (HỆ THỐNG KEY BẢO MẬT)
--- =============================================================================
+-------------------------------------------------
+-- TAB 5: SCRIPT VIP
 local VIP_Scroll = Tabs["Script VIP"].Scroll
 
 local TimeLabel = Instance.new("TextLabel", Tabs["Script VIP"].Frame) 
@@ -668,54 +637,20 @@ addVIPScriptButton("Become Brainrot", 10, 160, "https://raw.githubusercontent.co
 addVIPScriptButton("Animal Hospital", 195, 160, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
 addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
 addVIPScriptButton("fly", 195, 205, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
-addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fling")
+addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/Artss1/Flades_Hub/main/We%20Are%20Arts.lua")
 addVIPScriptButton("evulusoin", 195, 250, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
-
 local KeyArea = Instance.new("Frame", VIP_Scroll)
 KeyArea.Size = UDim2.new(1, 0, 1, 0)
 KeyArea.BackgroundTransparency = 1
 
 local KeyInput = Instance.new("TextBox", KeyArea)
-KeyInput.Size = UDim2.new(0, 160, 0, 40)
+KeyInput.Size = UDim2.new(0, 260, 0, 40)
 KeyInput.Position = UDim2.new(0.5, -130, 0, 20)
 KeyInput.PlaceholderText = "Nhập Key VIP tại đây..."
 KeyInput.Text = ""
-KeyInput.TextSize = 12
+KeyInput.TextSize = 14
 KeyInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 Instance.new("UICorner", KeyInput).CornerRadius = UDim.new(0, 8)
-
-local PasteKeyBtn = Instance.new("TextButton", KeyArea)
-PasteKeyBtn.Size = UDim2.new(0, 45, 0, 40)
-PasteKeyBtn.Position = UDim2.new(0.5, 40, 0, 20)
-PasteKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-PasteKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PasteKeyBtn.Text = "Dán"
-PasteKeyBtn.Font = Enum.Font.GothamBold
-PasteKeyBtn.TextSize = 11
-Instance.new("UICorner", PasteKeyBtn).CornerRadius = UDim.new(0, 6)
-
-PasteKeyBtn.MouseButton1Click:Connect(function()
-    if getclipboard then KeyInput.Text = getclipboard() end
-end)
-
-local CopyKeyBtn = Instance.new("TextButton", KeyArea)
-CopyKeyBtn.Size = UDim2.new(0, 45, 0, 40)
-CopyKeyBtn.Position = UDim2.new(0.5, 90, 0, 20)
-CopyKeyBtn.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-CopyKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CopyKeyBtn.Text = "Chép"
-CopyKeyBtn.Font = Enum.Font.GothamBold
-CopyKeyBtn.TextSize = 11
-Instance.new("UICorner", CopyKeyBtn).CornerRadius = UDim.new(0, 6)
-
-CopyKeyBtn.MouseButton1Click:Connect(function()
-    if setclipboard and KeyInput.Text ~= "" then
-        setclipboard(KeyInput.Text)
-        CopyKeyBtn.Text = "Xong!"
-        task.wait(1)
-        CopyKeyBtn.Text = "Chép"
-    end
-end)
 
 local ConfirmBtn = Instance.new("TextButton", KeyArea)
 ConfirmBtn.Size = UDim2.new(0, 120, 0, 35)
@@ -737,6 +672,7 @@ GetKeyBtn.Font = Enum.Font.GothamBold
 GetKeyBtn.TextSize = 14
 Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
 
+-- BẢNG CHỌN LOẠI KEY PR / NORMAL
 local KeySelectFrame = Instance.new("Frame", ScreenGui)
 KeySelectFrame.Size = UDim2.new(0, 300, 0, 160)
 KeySelectFrame.Position = UDim2.new(0.5, -150, 0.5, -80)
@@ -751,6 +687,7 @@ SelectTitle.Font = Enum.Font.GothamBold
 SelectTitle.TextSize = 14
 SelectTitle.TextColor3 = Color3.fromRGB(0, 0, 0)
 
+-- BẢNG PHỤ XỬ LÝ MUA/GET KEY
 local OptionFrame = Instance.new("Frame", ScreenGui)
 OptionFrame.Size = UDim2.new(0, 320, 0, 180)
 OptionFrame.Position = UDim2.new(0.5, -160, 0.5, -90)
@@ -807,22 +744,17 @@ end
 createCloseX(KeySelectFrame, function() KeySelectFrame.Visible = false end)
 createCloseX(OptionFrame, function() OptionFrame.Visible = false end)
 
--- =============================================================================
--- LOGIC TẠO KEY RANDOM VÀ MASTER KEY ADMIN
--- =============================================================================
-local adminMasterKey = "hayhub2h"
+local generatedNormal10Key = ""
 local permanentKey = "keyhayhubpr"
-local currentGeneratedNormalKey = "" -- Biến tạm lưu key random vừa tạo ra
 
-local function generateRandomKey()
+local function makeRandomString(length)
     local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local length = math.random(10, 15)
-    local randomKey = "hayhub_"
+    local str = ""
     for i = 1, length do
-        local rand = math.random(1, #chars)
-        randomKey = randomKey .. string.sub(chars, rand, rand)
+        local r = math.random(1, #chars)
+        str = str .. string.sub(chars, r, r)
     end
-    return randomKey
+    return str
 end
 
 local function showNoCoinsAlert(message)
@@ -1037,18 +969,19 @@ end)
 createSelectBtn("Key Normal", 50, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key Normal"
-    PriceLabel.Text = "Giá Key: 500 Coins"
+    PriceLabel.Text = "Giá Key: 200 Coins"
     OptionFrame.Visible = true
     
     local buyConn, getConn
     buyConn = BuyBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect() getConn:Disconnect()
         OptionFrame.Visible = false
-        if settings.Coins >= 500 then
-            settings.Coins = settings.Coins - 500
-            updateCoinsUI() saveVIPData()
-            currentGeneratedNormalKey = generateRandomKey() -- Sinh ngẫu nhiên
-            showFinalKeyPopup(currentGeneratedNormalKey)
+        if settings.Coins >= 200 then
+            settings.Coins = settings.Coins - 200
+            updateCoinsUI()
+            saveVIPData()
+            generatedNormal10Key = "hayhubhub_" .. makeRandomString(8)
+            showFinalKeyPopup(generatedNormal10Key)
         else
             showNoCoinsAlert("Bạn không đủ Coins để mua Key Normal!")
         end
@@ -1057,8 +990,8 @@ createSelectBtn("Key Normal", 50, function()
     getConn = GetKeyRealBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect() getConn:Disconnect()
         startRandomClickChallenge(52, "Normal10", function()
-            currentGeneratedNormalKey = generateRandomKey() -- Sinh ngẫu nhiên
-            showFinalKeyPopup(currentGeneratedNormalKey)
+            generatedNormal10Key = "hayhub_" .. makeRandomString(8)
+            showFinalKeyPopup(generatedNormal10Key)
         end)
     end)
 end)
@@ -1075,7 +1008,8 @@ createSelectBtn("Key PR", 100, function()
         OptionFrame.Visible = false
         if settings.Coins >= 500000 then
             settings.Coins = settings.Coins - 500000
-            updateCoinsUI() saveVIPData()
+            updateCoinsUI()
+            saveVIPData()
             showFinalKeyPopup(permanentKey)
         else
             showNoCoinsAlert("Bạn không đủ Coins để mua Key PR (Cần 500,000 Coins)!")
@@ -1090,175 +1024,142 @@ createSelectBtn("Key PR", 100, function()
     end)
 end)
 
--- =============================================================================
--- TAB 6: COINS ADS (MINI GAMES CÀY XU MỚI & CHECK CODE ONLINE)
--- =============================================================================
+-------------------------------------------------
+-- TAB 6: COINS ADS (CÀY XU - CHỈNH SỬA MINIGAME)
 local CoinsScroll = Tabs["Coins Ads"].Scroll
 
-local function createLeftCloseX(parent, callback)
-    local closeX = Instance.new("TextButton", parent)
-    closeX.Size = UDim2.new(0, 25, 0, 25)
-    closeX.Position = UDim2.new(0, 8, 0, 8)
-    closeX.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    closeX.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeX.Text = "X"
-    closeX.Font = Enum.Font.GothamBold
-    closeX.TextSize = 12
-    Instance.new("UICorner", closeX).CornerRadius = UDim.new(1, 0)
-    closeX.MouseButton1Click:Connect(callback)
-end
+local AdsBtn1 = Instance.new("TextButton", CoinsScroll)
+AdsBtn1.Size = UDim2.new(0, 180, 0, 40)
+AdsBtn1.Position = UDim2.new(0, 20, 0, 20)
+AdsBtn1.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+AdsBtn1.TextColor3 = Color3.fromRGB(255, 255, 255)
+AdsBtn1.Text = "Trò Chơi Tính Toán (+40 Xu)"
+AdsBtn1.Font = Enum.Font.GothamBold
+AdsBtn1.TextSize = 11
+Instance.new("UICorner", AdsBtn1).CornerRadius = UDim.new(0, 10)
 
--- TRÒ CHƠI 1: SO SÁNH SỐ LỚN/BẰNG/NHỎ
-local GameBtn1 = Instance.new("TextButton", CoinsScroll)
-GameBtn1.Size = UDim2.new(0, 180, 0, 40)
-GameBtn1.Position = UDim2.new(0, 20, 0, 20)
-GameBtn1.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-GameBtn1.TextColor3 = Color3.fromRGB(255, 255, 255)
-GameBtn1.Text = "Trò Chơi So Sánh Số"
-GameBtn1.Font = Enum.Font.GothamBold
-GameBtn1.TextSize = 12
-Instance.new("UICorner", GameBtn1).CornerRadius = UDim.new(0, 10)
-
-GameBtn1.MouseButton1Click:Connect(function()
+AdsBtn1.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
-    local playFrame = Instance.new("Frame", ScreenGui)
-    playFrame.Size = UDim2.new(0, 320, 0, 220)
-    playFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
-    playFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    Instance.new("UICorner", playFrame).CornerRadius = UDim.new(0, 12)
     
-    local roundLabel = Instance.new("TextLabel", playFrame)
-    roundLabel.Size = UDim2.new(1, 0, 0, 30) roundLabel.Position = UDim2.new(0, 0, 0, 10)
-    roundLabel.TextColor3 = Color3.fromRGB(255,255,255) roundLabel.Font = Enum.Font.GothamBold roundLabel.TextSize = 14
+    local mathFrame = Instance.new("Frame", ScreenGui)
+    mathFrame.Size = UDim2.new(0, 260, 0, 160)
+    mathFrame.Position = UDim2.new(0.5, -130, 0.5, -80)
+    mathFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Instance.new("UICorner", mathFrame).CornerRadius = UDim.new(0, 10)
     
-    local leftLabel = Instance.new("TextLabel", playFrame)
-    leftLabel.Size = UDim2.new(0, 80, 0, 50) leftLabel.Position = UDim2.new(0, 30, 0, 60)
-    leftLabel.TextColor3 = Color3.fromRGB(0, 255, 255) leftLabel.Font = Enum.Font.GothamBold leftLabel.TextSize = 28
+    local streak = 0
+    local eqLabel = Instance.new("TextLabel", mathFrame)
+    eqLabel.Size = UDim2.new(1, 0, 0, 40)
+    eqLabel.Position = UDim2.new(0, 0, 0, 10)
+    eqLabel.Font = Enum.Font.GothamBold
+    eqLabel.TextSize = 18
+    eqLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    eqLabel.BackgroundTransparency = 1
     
-    local midLabel = Instance.new("TextLabel", playFrame)
-    midLabel.Size = UDim2.new(0, 60, 0, 50) midLabel.Position = UDim2.new(0.5, -30, 0, 60)
-    midLabel.TextColor3 = Color3.fromRGB(255, 255, 0) midLabel.Font = Enum.Font.GothamBold midLabel.TextSize = 28 midLabel.Text = "?"
+    local streakLabel = Instance.new("TextLabel", mathFrame)
+    streakLabel.Size = UDim2.new(1, 0, 0, 20)
+    streakLabel.Position = UDim2.new(0, 0, 0, 45)
+    streakLabel.Font = Enum.Font.GothamBold
+    streakLabel.TextSize = 12
+    streakLabel.TextColor3 = Color3.fromRGB(255,255,0)
+    streakLabel.BackgroundTransparency = 1
+    streakLabel.Text = "Tiến độ: 0/4"
     
-    local rightLabel = Instance.new("TextLabel", playFrame)
-    rightLabel.Size = UDim2.new(0, 80, 0, 50) rightLabel.Position = UDim2.new(1, -110, 0, 60)
-    rightLabel.TextColor3 = Color3.fromRGB(255, 100, 255) rightLabel.Font = Enum.Font.GothamBold rightLabel.TextSize = 28
+    local b1 = Instance.new("TextButton", mathFrame)
+    b1.Size = UDim2.new(0, 70, 0, 40)
+    b1.Position = UDim2.new(0, 15, 0, 80)
+    b1.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    b1.Font = Enum.Font.GothamBold b1.TextSize = 16 b1.TextColor3 = Color3.fromRGB(255,255,255)
+    Instance.new("UICorner", b1).CornerRadius = UDim.new(0, 5)
+    
+    local b2 = Instance.new("TextButton", mathFrame)
+    b2.Size = UDim2.new(0, 70, 0, 40)
+    b2.Position = UDim2.new(0, 95, 0, 80)
+    b2.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    b2.Font = Enum.Font.GothamBold b2.TextSize = 16 b2.TextColor3 = Color3.fromRGB(255,255,255)
+    Instance.new("UICorner", b2).CornerRadius = UDim.new(0, 5)
+    
+    local b3 = Instance.new("TextButton", mathFrame)
+    b3.Size = UDim2.new(0, 70, 0, 40)
+    b3.Position = UDim2.new(0, 175, 0, 80)
+    b3.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    b3.Font = Enum.Font.GothamBold b3.TextSize = 16 b3.TextColor3 = Color3.fromRGB(255,255,255)
+    Instance.new("UICorner", b3).CornerRadius = UDim.new(0, 5)
 
-    local currentRound = 1 local numLeft, numRight
-    local function makeRound()
-        roundLabel.Text = "Màn chơi: " .. currentRound .. "/5"
-        numLeft = math.random(0, 30) numRight = math.random(0, 30)
-        leftLabel.Text = tostring(numLeft) rightLabel.Text = tostring(numRight)
+    local currentAnswer = 0
+    
+    local function generateMath()
+        local a = math.random(0,9)
+        local b = math.random(0,9)
+        local isAdd = math.random(1,2) == 1
+        local op = isAdd and "+"
+        currentAnswer = isAdd and (a+b)
+        eqLabel.Text = a .. " " .. op .. " " .. b .. " = ?"
+        streakLabel.Text = "Tiến độ: " .. streak .. "/4"
+        
+        local options = {currentAnswer, currentAnswer + math.random(1,3), currentAnswer - math.random(1,3)}
+        -- Suffle array
+        for i = #options, 2, -1 do
+            local j = math.random(i)
+            options[i], options[j] = options[j], options[i]
+        end
+        b1.Text = tostring(options[1])
+        b2.Text = tostring(options[2])
+        b3.Text = tostring(options[3])
     end
     
-    local function checkAns(ans)
-        local isCorrect = false
-        if ans == ">" and numLeft > numRight then isCorrect = true
-        elseif ans == "=" and numLeft == numRight then isCorrect = true
-        elseif ans == "<" and numLeft < numRight then isCorrect = true end
-        
-        if isCorrect then
-            if currentRound >= 5 then
-                settings.Coins = settings.Coins + 20
-                updateCoinsUI() saveVIPData() currentRound = 1
-            else currentRound = currentRound + 1 end
-        end
-        makeRound()
-    end
-
-    local btnLess = Instance.new("TextButton", playFrame)
-    btnLess.Size = UDim2.new(0, 60, 0, 40) btnLess.Position = UDim2.new(0, 30, 0, 140)
-    btnLess.Text = "<" btnLess.Font = Enum.Font.GothamBold btnLess.TextSize = 18
-    btnLess.MouseButton1Click:Connect(function() checkAns("<") end)
-
-    local btnEqual = Instance.new("TextButton", playFrame)
-    btnEqual.Size = UDim2.new(0, 60, 0, 40) btnEqual.Position = UDim2.new(0.5, -30, 0, 140)
-    btnEqual.Text = "=" btnEqual.Font = Enum.Font.GothamBold btnEqual.TextSize = 18
-    btnEqual.MouseButton1Click:Connect(function() checkAns("=") end)
-
-    local btnMore = Instance.new("TextButton", playFrame)
-    btnMore.Size = UDim2.new(0, 60, 0, 40) btnMore.Position = UDim2.new(1, -90, 0, 140)
-    btnMore.Text = ">" btnMore.Font = Enum.Font.GothamBold btnMore.TextSize = 18
-    btnMore.MouseButton1Click:Connect(function() checkAns(">") end)
-
-    makeRound()
-    createLeftCloseX(playFrame, function() playFrame:Destroy() MainFrame.Visible = true end)
-end)
-
--- TRÒ CHƠI 2: TÌM CHỮ CÁI TIẾNG ANH NGẪU NHIÊN
-local GameBtn2 = Instance.new("TextButton", CoinsScroll)
-GameBtn2.Size = UDim2.new(0, 180, 0, 40)
-GameBtn2.Position = UDim2.new(0, 210, 0, 20)
-GameBtn2.BackgroundColor3 = Color3.fromRGB(220, 120, 0)
-GameBtn2.TextColor3 = Color3.fromRGB(255, 255, 255)
-GameBtn2.Text = "Tìm Chữ Tiếng Anh"
-GameBtn2.Font = Enum.Font.GothamBold
-GameBtn2.TextSize = 11
-Instance.new("UICorner", GameBtn2).CornerRadius = UDim.new(0, 10)
-
-GameBtn2.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    local wordFrame = Instance.new("Frame", ScreenGui)
-    wordFrame.Size = UDim2.new(0, 320, 0, 220)
-    wordFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
-    wordFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    Instance.new("UICorner", wordFrame).CornerRadius = UDim.new(0, 12)
-    
-    local rLabel = Instance.new("TextLabel", wordFrame)
-    rLabel.Size = UDim2.new(1, 0, 0, 30) rLabel.Position = UDim2.new(0, 0, 0, 10)
-    rLabel.TextColor3 = Color3.fromRGB(255,255,255) rLabel.Font = Enum.Font.GothamBold rLabel.TextSize = 14
-    
-    local mainCharLabel = Instance.new("TextLabel", wordFrame)
-    mainCharLabel.Size = UDim2.new(0, 100, 0, 60) mainCharLabel.Position = UDim2.new(0.5, -50, 0, 50)
-    mainCharLabel.TextColor3 = Color3.fromRGB(255, 200, 0) mainCharLabel.Font = Enum.Font.GothamBold mainCharLabel.TextSize = 42
-
-    local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    local cRound = 1 local targetChar = "" local buttons = {}
-
-    local function setupWordRound()
-        rLabel.Text = "Màn chơi: " .. cRound .. "/10"
-        local randIdx = math.random(1, 26)
-        targetChar = string.sub(alphabet, randIdx, randIdx)
-        mainCharLabel.Text = targetChar
-        
-        local choices = {targetChar}
-        while #choices < 4 do
-            local r = math.random(1, 26)
-            local char = string.sub(alphabet, r, r)
-            local dup = false
-            for _, v in pairs(choices) do if v == char then dup = true end end
-            if not dup then table.insert(choices, char) end
-        end
-        
-        for i = #choices, 2, -1 do
-            local j = math.random(1, i)
-            choices[i], choices[j] = choices[j], choices[i]
-        end
-        
-        for idx, btn in pairs(buttons) do btn.Text = choices[idx] end
-    end
-
-    for i = 1, 4 do
-        local b = Instance.new("TextButton", wordFrame)
-        b.Size = UDim2.new(0, 55, 0, 40) b.Position = UDim2.new(0, 25 + (i-1)*68, 0, 135)
-        b.Font = Enum.Font.GothamBold b.TextSize = 16
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-        b.MouseButton1Click:Connect(function()
-            if b.Text == targetChar then
-                if cRound >= 10 then
-                    settings.Coins = settings.Coins + 40
-                    updateCoinsUI() saveVIPData() cRound = 1
-                else cRound = cRound + 1 end
+    local function handleAnswer(selected)
+        if tonumber(selected) == currentAnswer then
+            streak = streak + 1
+            if streak >= 4 then
+                streak = 0
+                settings.Coins = settings.Coins + 40
+                updateCoinsUI()
+                saveVIPData()
+                streakLabel.Text = "Bạn nhận được 40 xu!"
+                task.wait(0.5)
             end
-            setupWordRound()
-        end)
-        table.insert(buttons, b)
+        else
+            streak = 0
+            streakLabel.Text = "Sai! Bắt đầu lại."
+            task.wait(0.5)
+        end
+        generateMath()
     end
-
-    setupWordRound()
-    createLeftCloseX(wordFrame, function() wordFrame:Destroy() MainFrame.Visible = true end)
+    
+    b1.MouseButton1Click:Connect(function() handleAnswer(b1.Text) end)
+    b2.MouseButton1Click:Connect(function() handleAnswer(b2.Text) end)
+    b3.MouseButton1Click:Connect(function() handleAnswer(b3.Text) end)
+    
+    createCloseX(mathFrame, function()
+        mathFrame:Destroy()
+        MainFrame.Visible = true
+    end)
+    
+    generateMath()
 end)
 
--- VÙNG NHẬP CODE
+local AdsBtn2 = Instance.new("TextButton", CoinsScroll)
+AdsBtn2.Size = UDim2.new(0, 180, 0, 40)
+AdsBtn2.Position = UDim2.new(0, 210, 0, 20)
+AdsBtn2.BackgroundColor3 = Color3.fromRGB(220, 120, 0)
+AdsBtn2.TextColor3 = Color3.fromRGB(255, 255, 255)
+AdsBtn2.Text = "Thử Thách Siêu Tốc 3s (+50 Xu)"
+AdsBtn2.Font = Enum.Font.GothamBold
+AdsBtn2.TextSize = 11
+Instance.new("UICorner", AdsBtn2).CornerRadius = UDim.new(0, 10)
+
+AdsBtn2.MouseButton1Click:Connect(function()
+    startRandomClickChallenge(50, "CoinsMission", function()
+        settings.Coins = settings.Coins + 50
+        updateCoinsUI()
+        saveVIPData()
+        MainFrame.Visible = true
+        showTab("Coins Ads")
+    end, 3)
+end)
+
+-- Ô NHẬP CODE & LỆNH COMMAND
 local CodeLabel = Instance.new("TextLabel", CoinsScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
 CodeLabel.Position = UDim2.new(0, 20, 0, 90)
@@ -1272,7 +1173,7 @@ CodeLabel.TextXAlignment = Enum.TextXAlignment.Left
 local CodeInput = Instance.new("TextBox", CoinsScroll)
 CodeInput.Size = UDim2.new(0, 220, 0, 35)
 CodeInput.Position = UDim2.new(0, 20, 0, 115)
-CodeInput.PlaceholderText = "Nhập mã code tại đây..."
+CodeInput.PlaceholderText = "Nhập mã code"
 CodeInput.Text = ""
 CodeInput.TextSize = 12
 CodeInput.Font = Enum.Font.Gotham
@@ -1293,154 +1194,104 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    local secretAmount, operation = string.match(text, "^/coins%s+(%d+)%s*([%+%-])%s*vuhub2k12")
-    if not secretAmount then
-        secretAmount, operation = string.match(text, "^/coins%s+(%d+)%s*vuhub2k12%s*([%+%-])")
-    end
-    
-    if secretAmount and operation then
-        local numCoins = tonumber(secretAmount)
-        if operation == "+" then settings.Coins = settings.Coins + numCoins
-        elseif operation == "-" then settings.Coins = math.max(0, settings.Coins - numCoins) end
-        updateCoinsUI() saveVIPData()
-        CodeInput.Text = "" CodeInput.PlaceholderText = "Đã thực thi lệnh thành công!"
+    -- Xử lý lệnh /coins cho Admin hoặc mem xài mật khẩu
+    if string.sub(text, 1, 7) == "/coins " then
+        local args = string.split(text, " ")
+        local amt = tonumber(args[2])
+        if amt then
+            local pName = player.Name:lower()
+            local isAdmin = (pName == "ehfphvg362" or pName == "vu2k12hub")
+            
+            if isAdmin or args[3] == "hayhubcoins" then
+                settings.Coins = settings.Coins + amt
+                if settings.Coins < 0 then settings.Coins = 0 end
+                updateCoinsUI()
+                saveVIPData()
+                CodeInput.Text = ""
+                CodeInput.PlaceholderText = "Add/Remove thành công: " .. amt
+            else
+                CodeInput.Text = ""
+                CodeInput.PlaceholderText = "sai code"
+            end
+        else
+            CodeInput.Text = ""
+            CodeInput.PlaceholderText = "Lỗi cú pháp"
+        end
         return
     end
     
-    local success, response = pcall(function()
-        return game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/Code")
-    end)
-    
-    if not success or not response then
-        CodeInput.Text = "" CodeInput.PlaceholderText = "Lỗi kết nối máy chủ dữ liệu!" return
-    end
-    
-    local codeFound = false
-    for line in string.gmatch(response, "[^\r\n]+") do
-        local parts = string.split(line, ":")
-        if #parts >= 4 and parts[1] == text then
-            codeFound = true
-            local cCoins = tonumber(parts[2]) or 0
-            local cMaxUses = tonumber(parts[3]) or 1
-            local cStatus = parts[4]
-            
-            if cStatus == "true" then
-                if not settings.RedeemedCodes then settings.RedeemedCodes = {} end
-                local currentUses = settings.RedeemedCodes[text] or 0
-                
-                if currentUses < cMaxUses then
-                    settings.RedeemedCodes[text] = currentUses + 1
-                    settings.Coins = settings.Coins + cCoins
-                    updateCoinsUI() saveVIPData()
-                    CodeInput.Text = "" CodeInput.PlaceholderText = "Thành công! +" .. cCoins .. " xu"
-                else
-                    CodeInput.Text = "" CodeInput.PlaceholderText = "Mã đã đạt giới hạn nhập!"
-                end
+    -- Xử lý code server
+    local found = false
+    for _, cd in pairs(ServerCodes) do
+        if cd.code == text then
+            found = true
+            local usedCount = settings.RedeemedCodes[text] or 0
+            if usedCount < cd.maxUses then
+                settings.RedeemedCodes[text] = usedCount + 1
+                settings.Coins = settings.Coins + cd.coins
+                updateCoinsUI()
+                saveVIPData()
+                CodeInput.Text = ""
+                CodeInput.PlaceholderText = "Thành công! +" .. cd.coins .. " xu"
             else
-                CodeInput.Text = "" CodeInput.PlaceholderText = "Mã Code này đã hết hạn!"
+                CodeInput.Text = ""
+                CodeInput.PlaceholderText = "Code này đã hết lượt nhập!"
             end
             break
         end
     end
     
-    if not codeFound then
-        CodeInput.Text = "" CodeInput.PlaceholderText = "Mã code không tồn tại!" end
-end)
-
--- =============================================================================
--- TAB 7: HIỂN THỊ DANH SÁCH CODE HOẠT ĐỘNG (CHỈ TÊN CODE)
--- =============================================================================
-local Tab7Scroll = Tabs["Tab 7"].Scroll
-
-local tab7Layout = Instance.new("UIListLayout", Tab7Scroll)
-tab7Layout.SortOrder = Enum.SortOrder.LayoutOrder
-tab7Layout.Padding = UDim.new(0, 6)
-
-local function refreshTab7List()
-    for _, child in pairs(Tab7Scroll:GetChildren()) do
-        if child:IsA("TextLabel") or child:IsA("Frame") then child:Destroy() end
-    end
-    
-    local titleLbl = Instance.new("TextLabel", Tab7Scroll)
-    titleLbl.Size = UDim2.new(1, -20, 0, 30)
-    titleLbl.BackgroundTransparency = 1
-    titleLbl.Text = "📜 DANH SÁCH MÃ CODE"
-    titleLbl.TextColor3 = Color3.fromRGB(0, 150, 255)
-    titleLbl.Font = Enum.Font.GothamBold
-    titleLbl.TextSize = 13
-    titleLbl.TextXAlignment = Enum.TextXAlignment.Center
-
-    local success, response = pcall(function()
-        return game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/Code")
-    end)
-    
-    if success and response then
-        for line in string.gmatch(response, "[^\r\n]+") do
-            local parts = string.split(line, ":")
-            if #parts >= 4 then
-                local codeName = parts[1]
-                local status = parts[4]
-                
-                if status == "true" then
-                    local card = Instance.new("Frame", Tab7Scroll)
-                    card.Size = UDim2.new(1, -20, 0, 40)
-                    card.BackgroundColor3 = Color3.fromRGB(235, 235, 235)
-                    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
-                    
-                    local infoText = Instance.new("TextLabel", card)
-                    infoText.Size = UDim2.new(1, -10, 1, 0)
-                    infoText.Position = UDim2.new(0, 10, 0, 0)
-                    infoText.BackgroundTransparency = 1
-                    infoText.Text = "Code: " .. codeName
-                    infoText.TextColor3 = Color3.fromRGB(50, 50, 50)
-                    infoText.Font = Enum.Font.GothamBold
-                    infoText.TextSize = 12
-                    infoText.TextXAlignment = Enum.TextXAlignment.Left
-                end
-            end
+    -- Xử lý code cũ
+    if not found and text == "newbiecoins" then
+        if not settings.HasRedeemedNewbie then
+            settings.HasRedeemedNewbie = true
+            settings.Coins = settings.Coins + 200
+            updateCoinsUI()
+            saveVIPData()
+            CodeInput.Text = ""
+            CodeInput.PlaceholderText = "Thành công! +200 Coins"
+            found = true
+        else
+            CodeInput.Text = ""
+            CodeInput.PlaceholderText = "Máy này đã nhập code rồi!"
+            found = true
         end
     end
-end
-task.spawn(refreshTab7List)
-
--- =============================================================================
--- LOGIC KIỂM TRA KEY KHI BẤM "XÁC NHẬN"
--- =============================================================================
-ConfirmBtn.MouseButton1Click:Connect(function()
-    local entered = KeyInput.Text
-    if entered == "" then return end
     
-    -- Kiểm tra nếu nhập trúng key random được tạo ra
-    if currentGeneratedNormalKey ~= "" and entered == currentGeneratedNormalKey then
-        settings.VIP_Status.IsUnlocked = true
-        settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 7200 -- Key random cho 2 tiếng
-    -- Kiểm tra nếu nhập trúng key Master của Admin
-    elseif entered == adminMasterKey then
-        settings.VIP_Status.IsUnlocked = true
-        settings.VIP_Status.KeyType = "Normal10"
-        settings.VIP_Status.TimeRemaining = 7200 -- Admin dùng thoải mái 2 tiếng
-    -- Kiểm tra key Vĩnh Viễn
-    elseif entered == permanentKey then
-        settings.VIP_Status.IsUnlocked = true
-        settings.VIP_Status.KeyType = "Permanent"
-        settings.VIP_Status.TimeRemaining = 99999999
-    else
-        KeyInput.Text = "" KeyInput.PlaceholderText = "Sai Key! Vui lòng thử lại..." return
+    if not found then
+        CodeInput.Text = ""
+        CodeInput.PlaceholderText = "Mã code không hợp lệ!"
     end
-    
-    settings.VIP_Status.LastSavedTime = os.time()
-    saveVIPData() KeyArea.Visible = false VIPContent.Visible = true
 end)
 
--- =============================================================================
--- LỆNH CHAT COMMANDS & KHỞI CHẠY HỆ THỐNG GỐC
--- =============================================================================
+-------------------------------------------------
+-- TAB 7: CODE NEW (DANH SÁCH CODE SERVER)
+local Tab7Scroll = Tabs["Code New"].Scroll
+local yPosTab7 = 20
+for _, cd in pairs(ServerCodes) do
+    if cd.showInTab then
+        local codeBox = Instance.new("TextLabel", Tab7Scroll)
+        codeBox.Size = UDim2.new(1, -40, 0, 30)
+        codeBox.Position = UDim2.new(0, 20, 0, yPosTab7)
+        codeBox.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+        codeBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+        codeBox.Font = Enum.Font.GothamBold
+        codeBox.TextSize = 12
+        codeBox.Text = "Code: " .. cd.code .. " (" .. cd.maxUses .. " lần nhập)"
+        Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 8)
+        yPosTab7 = yPosTab7 + 40
+    end
+end
+
+-------------------------------------------------
+-- LOGIC LỆNH VIP GỐC VÀ CÁC COMMAND CHAT
 local function processFirebaseCommands(data)
     if not data or type(data) ~= "table" then return end
+    
     if data.vip_command and type(data.vip_command) == "table" then
         local action = data.vip_command.action
         local amount = tonumber(data.vip_command.amount)
+        
         if amount and amount > 0 then
             if action == "add" then
                 if not settings.VIP_Status.IsUnlocked then
@@ -1451,21 +1302,42 @@ local function processFirebaseCommands(data)
                 end
                 if settings.VIP_Status.KeyType == "Normal10" then
                     settings.VIP_Status.TimeRemaining = settings.VIP_Status.TimeRemaining + amount
-                    settings.VIP_Status.LastSavedTime = os.time() saveVIPData()
+                    settings.VIP_Status.LastSavedTime = os.time()
+                    saveVIPData()
                 end
             elseif action == "rm" then
                 if settings.VIP_Status.IsUnlocked and settings.VIP_Status.KeyType == "Normal10" then
                     settings.VIP_Status.TimeRemaining = math.max(0, settings.VIP_Status.TimeRemaining - amount)
                     if settings.VIP_Status.TimeRemaining <= 0 then
-                        settings.VIP_Status.IsUnlocked = false settings.VIP_Status.KeyType = ""
+                        settings.VIP_Status.IsUnlocked = false
+                        settings.VIP_Status.KeyType = ""
                         KeyArea.Visible = true VIPContent.Visible = false showTab("Script VIP")
                     end
-                    settings.VIP_Status.LastSavedTime = os.time() saveVIPData()
+                    settings.VIP_Status.LastSavedTime = os.time()
+                    saveVIPData()
                 end
             end
         end
     end
 end
+
+ConfirmBtn.MouseButton1Click:Connect(function()
+    local entered = KeyInput.Text
+    if entered == "" then return end
+    if (generatedNormal10Key ~= "" and entered == generatedNormal10Key) then
+        settings.VIP_Status.IsUnlocked = true
+        settings.VIP_Status.KeyType = "Normal10"
+        settings.VIP_Status.TimeRemaining = 3600
+    elseif (entered == permanentKey) then
+        settings.VIP_Status.IsUnlocked = true
+        settings.VIP_Status.KeyType = "Permanent"
+        settings.VIP_Status.TimeRemaining = 99999999
+    else
+        KeyInput.Text = "" KeyInput.PlaceholderText = "Sai Key! Vui lòng thử lại..." return
+    end
+    settings.VIP_Status.LastSavedTime = os.time()
+    saveVIPData() KeyArea.Visible = false VIPContent.Visible = true
+end)
 
 if settings.VIP_Status.IsUnlocked then KeyArea.Visible = false VIPContent.Visible = true
 else KeyArea.Visible = true VIPContent.Visible = false end
@@ -1482,7 +1354,7 @@ task.spawn(function()
                     KeyArea.Visible = true VIPContent.Visible = false showTab("Script VIP")
                     TimeLabel.Text = "VIP Status: Expired"
                 else
-                    local hours, minutes, seconds = math.floor(s / 3600), math.floor((s % 3600) / 60), s % 60
+                    local hours, minutes, seconds = math.floor(s / 1800), math.floor((s % 1800) / 60), s % 60
                     TimeLabel.Text = string.format("VIP: %02d:%02d:%02d", hours, minutes, seconds)
                 end
                 saveVIPData() 
@@ -1491,35 +1363,61 @@ task.spawn(function()
     end
 end)
 
-local TARGET_ADMIN = "ehfphvg362"
+-------------------------------------------------
+-- HỆ THỐNG XỬ LÝ LỆNH CHAT COMMAND (THAY THẾ FIREBASE)
 local function executeChatCommand(fullMessage)
     local args = string.split(fullMessage, " ")
-    local action = args[1] local amount = tonumber(args[2]) local targetName = args[3] 
+    local action = args[1] 
+    local amount = tonumber(args[2])
+    local targetName = args[3] 
+    
     if (action == "add" or action == "rm") and amount and targetName then
         targetName = targetName:lower()
         if targetName == "all" or targetName == player.Name:lower() then
-            processFirebaseCommands({vip_command = {action = action, amount = amount}})
+            local mockData = {
+                vip_command = {
+                    action = action,
+                    amount = amount
+                }
+            }
+            processFirebaseCommands(mockData)
         end
     end
 end
 
 local function hookPlayerChat(p)
-    if p.Name == TARGET_ADMIN then
-        p.Chatted:Connect(function(message) pcall(function() executeChatCommand(message) end) end)
+    if p.Name == "ehfphvg362" or p.Name == "vu2k12hub" then
+        p.Chatted:Connect(function(message)
+            pcall(function()
+                executeChatCommand(message)
+            end)
+        end)
     end
 end
 
-for _, p in pairs(players:GetPlayers()) do hookPlayerChat(p) end
+for _, p in pairs(players:GetPlayers()) do
+    hookPlayerChat(p)
+end
 
 players.PlayerAdded:Connect(function(p)
     playerCache[p.UserId] = { team = p.Team } 
-    p.Changed:Connect(function(prop) if prop == "Team" then updatePlayerTeamStatus(p) end end) 
-    p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end)
+    p.Changed:Connect(function(prop) 
+        if prop == "Team" then updatePlayerTeamStatus(p) end 
+    end) 
+    p.CharacterAdded:Connect(function() 
+        task.wait(0.1) refreshPlayerVisuals(p) 
+    end)
     hookPlayerChat(p)
 end)
 
-players.PlayerRemoving:Connect(function(p) playerCache[p.UserId] = nil end)
+players.PlayerRemoving:Connect(function(p) 
+    playerCache[p.UserId] = nil 
+end)
 
 for _, p in pairs(players:GetPlayers()) do 
-    if p ~= player then p.CharacterAdded:Connect(function() task.wait(0.1) refreshPlayerVisuals(p) end) end 
+    if p ~= player then 
+        p.CharacterAdded:Connect(function() 
+            task.wait(0.1) refreshPlayerVisuals(p) 
+        end) 
+    end 
 end
