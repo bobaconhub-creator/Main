@@ -1,0 +1,48 @@
+local HttpService = game:GetService("HttpService")
+local FIREBASE_URL = "https://trade-coins-default-rtdb.firebaseio.com/"
+local myName = game.Players.LocalPlayer.Name
+
+-- ĐỊNH NGHĨA BIẾN TIỀN CỦA GAME HIỆN TẠI
+-- Hãy thay "Coins" bằng tên biến tiền trong game bạn đang chơi (VD: Cash, Money, Gems...)
+local function getMyMoney()
+    return game.Players.LocalPlayer.leaderstats.Coins.Value 
+end
+
+local function setMyMoney(amount)
+    game.Players.LocalPlayer.leaderstats.Coins.Value = amount
+end
+
+-- HÀM GỬI (Gõ lệnh này vào Delta console để gửi: sendCoins("Tên_Người_Nhận", 500))
+function sendCoins(receiverName, amount)
+    if getMyMoney() >= amount then
+        setMyMoney(getMyMoney() - amount) -- Trừ tiền người gửi
+        local gift = {
+            sender = myName,
+            receiver = receiverName,
+            amount = amount,
+            isReceived = false
+        }
+        HttpService:PostAsync(FIREBASE_URL .. "gifts.json", HttpService:JSONEncode(gift))
+        print("Đã gửi cho " .. receiverName)
+    else
+        print("Không đủ tiền ảo!")
+    end
+end
+
+-- BỘ NHẬN TỰ ĐỘNG
+task.spawn(function()
+    while true do
+        task.wait(3)
+        local success, res = pcall(function() return HttpService:GetAsync(FIREBASE_URL .. "gifts.json") end)
+        if success and res ~= "null" then
+            local data = HttpService:JSONDecode(res)
+            for k, v in pairs(data) do
+                if v.receiver == myName and v.isReceived == false then
+                    setMyMoney(getMyMoney() + v.amount) -- Cộng tiền
+                    HttpService:PatchAsync(FIREBASE_URL .. "gifts/" .. k .. ".json", HttpService:JSONEncode({isReceived = true}))
+                    print("Nhận tiền thành công từ " .. v.sender)
+                end
+            end
+        end
+    end
+end)
