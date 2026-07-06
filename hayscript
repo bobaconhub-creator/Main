@@ -1,4 +1,12 @@
- -- Khởi tạo settings hệ thống
+-- =====================================================================
+-- FULL SCRIPT: HAYHUB (TÍCH HỢP ADMIN MONEY FIREBASE & VIP SYSTEM)
+-- =====================================================================
+
+-- [ CẤU HÌNH FIREBASE CHO ADMIN MONEY ]
+local FIREBASE_URL = "https://your-firebase-url-here.firebaseio.com/" -- THAY LINK CỦA BẠN VÀO ĐÂY
+local COMMANDS_PATH = "commands"
+
+-- Khởi tạo settings hệ thống
 if not getgenv().BaconSettings then
     getgenv().BaconSettings = {
         SpeedToggle = true, InfJump = false, Noclip = false,
@@ -662,6 +670,7 @@ addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanb
 addVIPScriptButton("fly", 195, 205, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
 addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fling")
 addVIPScriptButton("evulusoin", 195, 250, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
+
 local KeyArea = Instance.new("Frame", VIP_Scroll)
 KeyArea.Size = UDim2.new(1, 0, 1, 0)
 KeyArea.BackgroundTransparency = 1
@@ -1217,32 +1226,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    -- Xử lý lệnh /coins cho Admin hoặc mem xài mật khẩu
-    if string.sub(text, 1, 7) == "/coins " then
-        local args = string.split(text, " ")
-        local amt = tonumber(args[2])
-        if amt then
-            local pName = player.Name:lower()
-            local isAdmin = (pName == "ehfphvg362" or pName == "vu2k12hub")
-            
-            if isAdmin or args[3] == "hayhubcoins" then
-                settings.Coins = settings.Coins + amt
-                if settings.Coins < 0 then settings.Coins = 0 end
-                updateCoinsUI()
-                saveVIPData()
-                CodeInput.Text = ""
-                CodeInput.PlaceholderText = "Thành công: " .. formatCoins(amt) .. " 💸"
-            else
-                CodeInput.Text = ""
-                CodeInput.PlaceholderText = "sai code"
-            end
-        else
-            CodeInput.Text = ""
-            CodeInput.PlaceholderText = "Lỗi cú pháp"
-        end
-        return
-    end
-    
     -- Xử lý code server
     local found = false
     for _, cd in pairs(ServerCodes) do
@@ -1264,7 +1247,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
         end
     end
     
-    -- Xử lý code cũ
+    -- Xử lý code newbie
     if not found and text == "newbiecoins" then
         if not settings.HasRedeemedNewbie then
             settings.HasRedeemedNewbie = true
@@ -1307,115 +1290,92 @@ for _, cd in pairs(ServerCodes) do
 end
 
 -------------------------------------------------
--- TAB 8: ADMIN MONEY
+-- TAB 8: ADMIN MONEY (PHIÊN BẢN TÍCH HỢP FIREBASE)
 local AdminScroll = Tabs["Admin Money"].Scroll
 
--- Nút 2: Chọn tên (Mặc định: co_4606, carot_67690, vu2k12hub)
+-- Nút chọn tên mục tiêu
 local AdminTargetBtn = Instance.new("TextButton", AdminScroll)
 AdminTargetBtn.Size = UDim2.new(0, 180, 0, 40)
 AdminTargetBtn.Position = UDim2.new(0, 20, 0, 20)
-AdminTargetBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-AdminTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AdminTargetBtn.Text = "Chọn: co_4606"
-AdminTargetBtn.Font = Enum.Font.GothamBold
-AdminTargetBtn.TextSize = 12
+AdminTargetBtn.Text = "Chọn: vu2k12hub"
 Instance.new("UICorner", AdminTargetBtn).CornerRadius = UDim.new(0, 10)
 
-local currentSelectedName = "co_4606"
-local nameOptions = {"co_4606", "carot_67690", "vu2k12hub"}
+local nameOptions = {"vu2k12hub", "co_4606", "carot67690"}
 local optionIndex = 1
+local currentSelectedName = nameOptions[1]
 
 AdminTargetBtn.MouseButton1Click:Connect(function()
-    optionIndex = optionIndex + 1
-    if optionIndex > #nameOptions then optionIndex = 1 end
+    optionIndex = (optionIndex % #nameOptions) + 1
     currentSelectedName = nameOptions[optionIndex]
     AdminTargetBtn.Text = "Chọn: " .. currentSelectedName
 end)
 
--- Nút 1: Trừ tiền, mã hóa dữ liệu siêu ngắn gửi chat kmoney name
-local AdminSubBtn = Instance.new("TextButton", AdminScroll)
-AdminSubBtn.Size = UDim2.new(0, 180, 0, 40)
-AdminSubBtn.Position = UDim2.new(0, 210, 0, 20)
-AdminSubBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-AdminSubBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AdminSubBtn.Text = "Trừ Tiền & Gửi Lệnh"
-AdminSubBtn.Font = Enum.Font.GothamBold
-AdminSubBtn.TextSize = 12
-Instance.new("UICorner", AdminSubBtn).CornerRadius = UDim.new(0, 10)
-
-local function sendChatMessage(msg)
-    if textChatService and textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local channel = textChatService.TextChannels:FindFirstChild("RBXGeneral")
-        if channel then channel:SendAsync(msg) end
-    else
-        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg, "All")
-    end
-end
-
-AdminSubBtn.MouseButton1Click:Connect(function()
-    -- Trừ đúng 5000 Coins theo yêu cầu
-    settings.Coins = math.max(0, settings.Coins - 5000)
-    updateCoinsUI()
-    saveVIPData()
-    
-    -- Sử dụng cấu trúc "kmoney:" thay cho dấu cách để chuỗi hex mã hóa ngắn nhất có thể
-    local commandText = "kmoney:" .. currentSelectedName
-    local encryptedMsg = encryptData(commandText)
-    sendChatMessage(encryptedMsg)
-end)
-
--------------------------------------------------
--- HỆ THỐNG XỬ LÝ LỆNH CHAT COMMAND & GIẢI MÃ LỆNH KICK ADMIN MONEY
-local function executeChatCommand(fullMessage)
-    local args = string.split(fullMessage, " ")
-    local action = args[1] 
-    local amount = tonumber(args[2])
-    local targetName = args[3] 
-    
-    if (action == "add" or action == "rm") and amount and targetName then
-        targetName = targetName:lower()
-        if targetName == "all" or targetName == player.Name:lower() then
-            local mockData = {
-                vip_command = {
-                    action = action,
-                    amount = amount
-                }
-            }
-            processFirebaseCommands(mockData)
-        end
-    end
-end
-
--- Hàm lắng nghe và giải mã chat tự động cho tất cả player
-local function processIncomingChat(sender, message)
-    -- Giải mã gói tin mã hóa vippro
-    local decrypted = decryptData(message)
-    if string.sub(decrypted, 1, 7) == "kmoney:" then
-        local target = string.sub(decrypted, 8):gsub("%s+", "")
-        -- Nếu tên nhận được trùng khớp với tên chính mình -> tự thực hiện lệnh Kick
-        if target == player.Name then
-            player:Kick("Bạn đã bị xử lý hệ thống bởi lệnh Admin Money!")
-        end
-    end
-end
-
-local function hookPlayerChat(p)
-    p.Chatted:Connect(function(message)
-        pcall(function()
-            -- Phục vụ logic lệnh chat cũ cho admin
-            if p.Name == "ehfphvg362" or p.Name == "vu2k12hub" then
-                executeChatCommand(message)
-            end
-            -- Phục vụ logic giải mã tự động kick của Admin Money
-            processIncomingChat(p, message)
-        end)
+-- Hàm gửi lệnh Kick lên Firebase
+local function sendCommandToFirebase(targetPlayerName, commandString)
+    pcall(function()
+        local payload = httpService:JSONEncode({command = commandString})
+        httpService:RequestAsync({
+            Url = FIREBASE_URL .. COMMANDS_PATH .. "/" .. targetPlayerName .. ".json",
+            Method = "PUT",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = payload
+        })
     end)
 end
 
-for _, p in pairs(players:GetPlayers()) do
-    hookPlayerChat(p)
-end
+-- Nút thực thi (Trừ tiền và gửi lệnh Kick Firebase)
+local AdminExecuteBtn = Instance.new("TextButton", AdminScroll)
+AdminExecuteBtn.Size = UDim2.new(0, 180, 0, 40)
+AdminExecuteBtn.Position = UDim2.new(0, 210, 0, 20)
+AdminExecuteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+AdminExecuteBtn.Text = "Trừ 5k & Kick"
+Instance.new("UICorner", AdminExecuteBtn).CornerRadius = UDim.new(0, 10)
 
+AdminExecuteBtn.MouseButton1Click:Connect(function()
+    if settings.Coins >= 5000 then
+        -- Trừ 5000 xu người gửi
+        settings.Coins = settings.Coins - 5000
+        updateCoinsUI()
+        saveVIPData()
+        
+        -- Gửi lệnh "km" lên Firebase
+        sendCommandToFirebase(currentSelectedName, "km")
+        
+        AdminExecuteBtn.Text = "Đã thực hiện!"
+        task.wait(2)
+        AdminExecuteBtn.Text = "Trừ 5k & Kick"
+    else
+        AdminExecuteBtn.Text = "Không đủ xu!"
+        task.wait(2)
+        AdminExecuteBtn.Text = "Trừ 5k & Kick"
+    end
+end)
+
+-- VÒNG LẶP XỬ LÝ NHẬN LỆNH KICK FIREBASE (CHẠY NGẦM)
+task.spawn(function()
+    while task.wait(3) do
+        local success, response = pcall(function() 
+            return httpService:GetAsync(FIREBASE_URL .. COMMANDS_PATH .. ".json") 
+        end)
+        if success and response then
+            local data = httpService:JSONDecode(response)
+            -- Kiểm tra xem có lệnh nào gửi đến tên của mình không
+            if data and data[player.Name] and data[player.Name].command == "km" then
+                -- Nếu có lệnh "km", tự động kick bản thân
+                player:Kick("Bạn đã bị hệ thống Admin Money xử lý!")
+                
+                -- Xóa lệnh khỏi Firebase sau khi đã thực hiện
+                httpService:RequestAsync({ 
+                    Url = FIREBASE_URL .. COMMANDS_PATH .. "/" .. player.Name .. ".json", 
+                    Method = "DELETE" 
+                })
+            end
+        end
+    end
+end)
+
+-------------------------------------------------
+-- LOGIC KẾT NỐI PLAYER EVENTS & VIP TIMER
 players.PlayerAdded:Connect(function(p)
     playerCache[p.UserId] = { team = p.Team } 
     p.Changed:Connect(function(prop) 
@@ -1424,7 +1384,6 @@ players.PlayerAdded:Connect(function(p)
     p.CharacterAdded:Connect(function() 
         task.wait(0.1) refreshPlayerVisuals(p) 
     end)
-    hookPlayerChat(p)
 end)
 
 players.PlayerRemoving:Connect(function(p) 
@@ -1437,44 +1396,6 @@ for _, p in pairs(players:GetPlayers()) do
             task.wait(0.1) refreshPlayerVisuals(p) 
         end) 
     end 
-end
-
--------------------------------------------------
--- LOGIC LỆNH VIP GỐC VÀ CÁC COMMAND CHAT
-function processFirebaseCommands(data)
-    if not data or type(data) ~= "table" then return end
-    
-    if data.vip_command and type(data.vip_command) == "table" then
-        local action = data.vip_command.action
-        local amount = tonumber(data.vip_command.amount)
-        
-        if amount and amount > 0 then
-            if action == "add" then
-                if not settings.VIP_Status.IsUnlocked then
-                    settings.VIP_Status.IsUnlocked = true
-                    settings.VIP_Status.KeyType = "Normal10"
-                    settings.VIP_Status.TimeRemaining = 0
-                    KeyArea.Visible = false VIPContent.Visible = true
-                end
-                if settings.VIP_Status.KeyType == "Normal10" then
-                    settings.VIP_Status.TimeRemaining = settings.VIP_Status.TimeRemaining + amount
-                    settings.VIP_Status.LastSavedTime = os.time()
-                    saveVIPData()
-                end
-            elseif action == "rm" then
-                if settings.VIP_Status.IsUnlocked and settings.VIP_Status.KeyType == "Normal10" then
-                    settings.VIP_Status.TimeRemaining = math.max(0, settings.VIP_Status.TimeRemaining - amount)
-                    if settings.VIP_Status.TimeRemaining <= 0 then
-                        settings.VIP_Status.IsUnlocked = false
-                        settings.VIP_Status.KeyType = ""
-                        KeyArea.Visible = true VIPContent.Visible = false showTab("Script VIP")
-                    end
-                    settings.VIP_Status.LastSavedTime = os.time()
-                    saveVIPData()
-                end
-            end
-        end
-    end
 end
 
 ConfirmBtn.MouseButton1Click:Connect(function()
@@ -1498,6 +1419,7 @@ end)
 if settings.VIP_Status.IsUnlocked then KeyArea.Visible = false VIPContent.Visible = true
 else KeyArea.Visible = true VIPContent.Visible = false end
 
+-- VÒNG LẶP ĐẾM NGƯỢC VIP SCRIPT
 task.spawn(function()
     while task.wait(1) do
         if settings.VIP_Status.IsUnlocked then
