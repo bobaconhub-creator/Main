@@ -143,7 +143,7 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,12)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 
--- Thêm hiển thị góc trái Coins:0 coins
+-- Thêm hiển thị góc trái money:0 💸
 local CoinsLabel = Instance.new("TextLabel", MainFrame)
 CoinsLabel.Size = UDim2.new(0, 150, 0, 20)
 CoinsLabel.Position = UDim2.new(0, 12, 0, 8)
@@ -173,7 +173,7 @@ local function formatCoins(n)
 end
 
 local function updateCoinsUI()
-    CoinsLabel.Text = "🪙 Coins: " .. formatCoins(settings.Coins)
+    CoinsLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins)
 end
 updateCoinsUI()
 
@@ -1003,7 +1003,7 @@ createSelectBtn("Key Normal", 50, function()
             generatedNormal10Key = "hayhubhub_" .. makeRandomString(8)
             showFinalKeyPopup(generatedNormal10Key)
         else
-            showNoCoinsAlert("Bạn không đủ 🪙 để mua Key Normal!")
+            showNoCoinsAlert("Bạn không đủ 💸 để mua Key Normal!")
         end
     end)
     
@@ -1019,7 +1019,7 @@ end)
 createSelectBtn("Key PR", 100, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key PR"
-    PriceLabel.Text = "Giá Key: 500K 🪙"
+    PriceLabel.Text = "Giá Key: 500K 💸"
     OptionFrame.Visible = true
     
     local buyConn, getConn
@@ -1045,7 +1045,7 @@ createSelectBtn("Key PR", 100, function()
 end)
 
 -------------------------------------------------
--- TAB 6: COINS ADS (CÀY XU - CHỈNH SỬA MINIGAME)
+-- TAB 6: MONEY ADS (CÀY XU - CHỈNH SỬA MINIGAME)
 local CoinsScroll = Tabs["Coins Ads"].Scroll
 
 local AdsBtn1 = Instance.new("TextButton", CoinsScroll)
@@ -1053,7 +1053,7 @@ AdsBtn1.Size = UDim2.new(0, 180, 0, 40)
 AdsBtn1.Position = UDim2.new(0, 20, 0, 20)
 AdsBtn1.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 AdsBtn1.TextColor3 = Color3.fromRGB(255, 255, 255)
-AdsBtn1.Text = "Trò Chơi Tính Toán (+40 🪙)"
+AdsBtn1.Text = "Trò Chơi Tính Toán (+40 💸)"
 AdsBtn1.Font = Enum.Font.GothamBold
 AdsBtn1.TextSize = 11
 Instance.new("UICorner", AdsBtn1).CornerRadius = UDim.new(0, 10)
@@ -1136,7 +1136,7 @@ AdsBtn1.MouseButton1Click:Connect(function()
                 settings.Coins = settings.Coins + 40
                 updateCoinsUI()
                 saveVIPData()
-                streakLabel.Text = "Bạn nhận được 40 🪙!"
+                streakLabel.Text = "Bạn nhận được 40 💸!"
                 task.wait(0.5)
             end
         else
@@ -1228,7 +1228,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
                 updateCoinsUI()
                 saveVIPData()
                 CodeInput.Text = ""
-                CodeInput.PlaceholderText = "Thành công: " .. formatCoins(amt) .. " 🪙"
+                CodeInput.PlaceholderText = "Thành công: " .. formatCoins(amt) .. " 💸"
             else
                 CodeInput.Text = ""
                 CodeInput.PlaceholderText = "sai code"
@@ -1269,7 +1269,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
             updateCoinsUI()
             saveVIPData()
             CodeInput.Text = ""
-            CodeInput.PlaceholderText = "Thành công! +200 🪙"
+            CodeInput.PlaceholderText = "Thành công! +200 💸"
             found = true
         else
             CodeInput.Text = ""
