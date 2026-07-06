@@ -152,8 +152,28 @@ CoinsLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
 CoinsLabel.Font = Enum.Font.GothamBold
 CoinsLabel.TextSize = 12
 CoinsLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Hàm rút gọn tiền (K, M, B, T, Qa, Qi...)
+local function formatCoins(n)
+    local num = tonumber(n)
+    if not num then return "0" end
+    if num < 1000 then return tostring(num) end
+
+    local suffixes = {
+        "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td"
+    }
+    
+    local suffixIndex = 0
+    while num >= 1000 and suffixIndex < #suffixes do
+        num = num / 1000
+        suffixIndex = suffixIndex + 1
+    end
+
+    return string.format("%.1f", num):gsub("%.0$", "") .. suffixes[suffixIndex]
+end
+
 local function updateCoinsUI()
-    CoinsLabel.Text = "Coins: " .. settings.Coins .. " coins"
+    CoinsLabel.Text = "🪙 Coins: " .. formatCoins(settings.Coins)
 end
 updateCoinsUI()
 
@@ -969,21 +989,21 @@ end)
 createSelectBtn("Key Normal", 50, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key Normal"
-    PriceLabel.Text = "Giá Key: 200 Coins"
+    PriceLabel.Text = "Giá Key: 500 🪙"
     OptionFrame.Visible = true
     
     local buyConn, getConn
     buyConn = BuyBtn.MouseButton1Click:Connect(function()
         buyConn:Disconnect() getConn:Disconnect()
         OptionFrame.Visible = false
-        if settings.Coins >= 200 then
-            settings.Coins = settings.Coins - 200
+        if settings.Coins >= 500 then
+            settings.Coins = settings.Coins - 500
             updateCoinsUI()
             saveVIPData()
             generatedNormal10Key = "hayhubhub_" .. makeRandomString(8)
             showFinalKeyPopup(generatedNormal10Key)
         else
-            showNoCoinsAlert("Bạn không đủ Coins để mua Key Normal!")
+            showNoCoinsAlert("Bạn không đủ 🪙 để mua Key Normal!")
         end
     end)
     
@@ -999,7 +1019,7 @@ end)
 createSelectBtn("Key PR", 100, function()
     KeySelectFrame.Visible = false
     OptionTitle.Text = "Lựa chọn Key PR"
-    PriceLabel.Text = "Giá Key: 500,000 Coins"
+    PriceLabel.Text = "Giá Key: 500K 🪙"
     OptionFrame.Visible = true
     
     local buyConn, getConn
@@ -1012,7 +1032,7 @@ createSelectBtn("Key PR", 100, function()
             saveVIPData()
             showFinalKeyPopup(permanentKey)
         else
-            showNoCoinsAlert("Bạn không đủ Coins để mua Key PR (Cần 500,000 Coins)!")
+            showNoCoinsAlert("Bạn không đủ 🪙 để mua Key PR (Cần 500K 🪙)!")
         end
     end)
     
@@ -1033,7 +1053,7 @@ AdsBtn1.Size = UDim2.new(0, 180, 0, 40)
 AdsBtn1.Position = UDim2.new(0, 20, 0, 20)
 AdsBtn1.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 AdsBtn1.TextColor3 = Color3.fromRGB(255, 255, 255)
-AdsBtn1.Text = "Trò Chơi Tính Toán (+40 Xu)"
+AdsBtn1.Text = "Trò Chơi Tính Toán (+40 🪙)"
 AdsBtn1.Font = Enum.Font.GothamBold
 AdsBtn1.TextSize = 11
 Instance.new("UICorner", AdsBtn1).CornerRadius = UDim.new(0, 10)
@@ -1092,8 +1112,8 @@ AdsBtn1.MouseButton1Click:Connect(function()
         local a = math.random(0,9)
         local b = math.random(0,9)
         local isAdd = math.random(1,2) == 1
-        local op = isAdd and "+"
-        currentAnswer = isAdd and (a+b)
+        local op = isAdd and "+" , "-"
+        currentAnswer = isAdd and (a+b) , (a+b)
         eqLabel.Text = a .. " " .. op .. " " .. b .. " = ?"
         streakLabel.Text = "Tiến độ: " .. streak .. "/4"
         
@@ -1116,7 +1136,7 @@ AdsBtn1.MouseButton1Click:Connect(function()
                 settings.Coins = settings.Coins + 40
                 updateCoinsUI()
                 saveVIPData()
-                streakLabel.Text = "Bạn nhận được 40 xu!"
+                streakLabel.Text = "Bạn nhận được 40 🪙!"
                 task.wait(0.5)
             end
         else
@@ -1144,7 +1164,7 @@ AdsBtn2.Size = UDim2.new(0, 180, 0, 40)
 AdsBtn2.Position = UDim2.new(0, 210, 0, 20)
 AdsBtn2.BackgroundColor3 = Color3.fromRGB(220, 120, 0)
 AdsBtn2.TextColor3 = Color3.fromRGB(255, 255, 255)
-AdsBtn2.Text = "Thử Thách Siêu Tốc 3s (+50 Xu)"
+AdsBtn2.Text = "Thử Thách Siêu Tốc 3s (+50 🪙)"
 AdsBtn2.Font = Enum.Font.GothamBold
 AdsBtn2.TextSize = 11
 Instance.new("UICorner", AdsBtn2).CornerRadius = UDim.new(0, 10)
@@ -1208,7 +1228,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
                 updateCoinsUI()
                 saveVIPData()
                 CodeInput.Text = ""
-                CodeInput.PlaceholderText = "Add/Remove thành công: " .. amt
+                CodeInput.PlaceholderText = "Thành công: " .. formatCoins(amt) .. " 🪙"
             else
                 CodeInput.Text = ""
                 CodeInput.PlaceholderText = "sai code"
@@ -1232,7 +1252,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
                 updateCoinsUI()
                 saveVIPData()
                 CodeInput.Text = ""
-                CodeInput.PlaceholderText = "Thành công! +" .. cd.coins .. " xu"
+                CodeInput.PlaceholderText = "Thành công! +" .. formatCoins(cd.coins) .. " 🪙"
             else
                 CodeInput.Text = ""
                 CodeInput.PlaceholderText = "Code này đã hết lượt nhập!"
@@ -1249,7 +1269,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
             updateCoinsUI()
             saveVIPData()
             CodeInput.Text = ""
-            CodeInput.PlaceholderText = "Thành công! +200 Coins"
+            CodeInput.PlaceholderText = "Thành công! +200 🪙"
             found = true
         else
             CodeInput.Text = ""
@@ -1277,7 +1297,7 @@ for _, cd in pairs(ServerCodes) do
         codeBox.TextColor3 = Color3.fromRGB(0, 0, 0)
         codeBox.Font = Enum.Font.GothamBold
         codeBox.TextSize = 12
-        codeBox.Text = "Code: " .. cd.code .. " (" .. cd.maxUses .. " lần nhập)"
+        codeBox.Text = "Code: " .. cd.code .. " (" .. formatCoins(cd.coins) .. " 🪙 - " .. cd.maxUses .. " lần)"
         Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 8)
         yPosTab7 = yPosTab7 + 40
     end
