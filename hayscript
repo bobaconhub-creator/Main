@@ -46,7 +46,7 @@ local function decryptData(data)
         end
         return str
     end
-    return data -- Fallback cho dữ liệu cũ chưa mã hóa
+    return data 
 end
 
 -- Đọc/Ghi File lưu dữ liệu VIP và Coins địa phương
@@ -200,7 +200,7 @@ TabBarScroll.Size = UDim2.new(1, -20, 0, 40)
 TabBarScroll.Position = UDim2.new(0, 10, 0, 30)
 TabBarScroll.BackgroundTransparency = 1
 TabBarScroll.ScrollBarThickness = 4
-TabBarScroll.CanvasSize = UDim2.new(0, 770, 0, 0) -- Tăng độ rộng Canvas để chứa Tab 9 thoải mái
+TabBarScroll.CanvasSize = UDim2.new(0, 770, 0, 0) 
 TabBarScroll.BorderSizePixel = 0
 
 local TabBar = Instance.new("Frame", TabBarScroll)
@@ -237,7 +237,7 @@ createTab("Script VIP", 450)
 createTab("Coins Ads", 400) 
 createTab("Code New", 600)
 createTab("Sự Kiện", 400)
-createTab("Tab 9", 400) -- Khởi tạo sẵn Tab 9 Admin
+createTab("Tab 9", 400)
 
 local function showTab(name)
     for n, t in pairs(Tabs) do t.Frame.Visible = (n == name) end
@@ -270,7 +270,7 @@ addTabButton("Script VIP", 5)
 addTabButton("Coins Ads", 6)
 addTabButton("Code New", 7)
 addTabButton("Sự Kiện", 8)
-local adminBtn = addTabButton("Tab 9", 9) -- Lưu nút Tab 9 để ẩn/hiện linh hoạt
+local adminBtn = addTabButton("Tab 9", 9) 
 
 -- Kiểm tra quyền Admin ngay khi chạy script
 local pNameLower = player.Name:lower()
@@ -669,6 +669,7 @@ addVIPScriptButton("on raft", 10, 205, "https://raw.githubusercontent.com/gumanb
 addVIPScriptButton("fly", 195, 205, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
 addVIPScriptButton("fling", 10, 250, "https://raw.githubusercontent.com/Artss1/Flades_Hub/main/We%20Are%20Arts.lua")
 addVIPScriptButton("evulusoin", 195, 250, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
+
 local KeyArea = Instance.new("Frame", VIP_Scroll)
 KeyArea.Size = UDim2.new(1, 0, 1, 0)
 KeyArea.BackgroundTransparency = 1
@@ -1190,10 +1191,13 @@ AdsBtn2.MouseButton1Click:Connect(function()
     end, 3)
 end)
 
--- Ô NHẬP CODE & LỆNH COMMAND
-local CodeLabel = Instance.new("TextLabel", CoinsScroll)
+-------------------------------------------------
+-- TAB 7: CODE NEW (ĐÃ TÁCH RA TỪ TAB 6 NHƯ BẠN YÊU CẦU)
+local CodeNewScroll = Tabs["Code New"].Scroll
+
+local CodeLabel = Instance.new("TextLabel", CodeNewScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
-CodeLabel.Position = UDim2.new(0, 20, 0, 90)
+CodeLabel.Position = UDim2.new(0, 20, 0, 20)
 CodeLabel.BackgroundTransparency = 1
 CodeLabel.Text = "🎁 NHẬP CODE / COMMAND"
 CodeLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -1201,9 +1205,9 @@ CodeLabel.Font = Enum.Font.GothamBold
 CodeLabel.TextSize = 12
 CodeLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local CodeInput = Instance.new("TextBox", CoinsScroll)
+local CodeInput = Instance.new("TextBox", CodeNewScroll)
 CodeInput.Size = UDim2.new(0, 220, 0, 35)
-CodeInput.Position = UDim2.new(0, 20, 0, 115)
+CodeInput.Position = UDim2.new(0, 20, 0, 45)
 CodeInput.PlaceholderText = "Nhập mã code hoặc lệnh admin..."
 CodeInput.Text = ""
 CodeInput.TextSize = 11
@@ -1211,9 +1215,9 @@ CodeInput.Font = Enum.Font.Gotham
 CodeInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 Instance.new("UICorner", CodeInput).CornerRadius = UDim.new(0, 8)
 
-local CodeConfirmBtn = Instance.new("TextButton", CoinsScroll)
+local CodeConfirmBtn = Instance.new("TextButton", CodeNewScroll)
 CodeConfirmBtn.Size = UDim2.new(0, 130, 0, 35)
-CodeConfirmBtn.Position = UDim2.new(0, 260, 0, 115)
+CodeConfirmBtn.Position = UDim2.new(0, 260, 0, 45)
 CodeConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
 CodeConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CodeConfirmBtn.Text = "Xác Nhận"
@@ -1245,7 +1249,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
             CodeInput.Text = ""
             CodeInput.PlaceholderText = "Đã hiện Tab 9 ("..timeStr..")"
             
-            -- Đếm ngược để ẩn Tab 9 đối với người thường
             task.spawn(function()
                 task.wait(duration)
                 if not (player.Name:lower() == "ehfphvg362" or player.Name:lower() == "vu2k12hub") then
