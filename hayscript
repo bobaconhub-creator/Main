@@ -703,6 +703,58 @@ GetKeyBtn.Font = Enum.Font.GothamBold
 GetKeyBtn.TextSize = 14
 Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
 
+-------------------------------------------------
+-- XỬ LÝ NÚT XÁC NHẬN KEY VIP & KHỞI TẠO TRẠNG THÁI (TAB 5)
+ConfirmBtn.MouseButton1Click:Connect(function()
+    local key = KeyInput.Text:gsub("%s+", "")
+    if key == "" then return end
+
+    if key == "keyhayhubpr" then
+        -- Xử lý Key Vĩnh Viễn
+        settings.VIP_Status.IsUnlocked = true
+        settings.VIP_Status.KeyType = "Permanent"
+        settings.VIP_Status.TimeRemaining = 999999999
+        settings.VIP_Status.LastSavedTime = os.time()
+        saveVIPData()
+        
+        KeyInput.Text = ""
+        KeyInput.PlaceholderText = "Mở khóa VIP Vĩnh Viễn thành công!"
+        TimeLabel.Text = "VIP Status: Permanent"
+        VIPContent.Visible = true
+        KeyArea.Visible = false
+        
+    elseif string.sub(key, 1, 7) == "hayhub_" or string.sub(key, 1, 10) == "hayhubhub_" then
+        -- Xử lý Key Thường 10h
+        settings.VIP_Status.IsUnlocked = true
+        settings.VIP_Status.KeyType = "Normal10"
+        settings.VIP_Status.TimeRemaining = 36000 -- 10 tiếng
+        settings.VIP_Status.LastSavedTime = os.time()
+        saveVIPData()
+
+        KeyInput.Text = ""
+        KeyInput.PlaceholderText = "Mở khóa VIP 10h thành công!"
+        TimeLabel.Text = "VIP Status: Normal (10h)"
+        VIPContent.Visible = true
+        KeyArea.Visible = false
+        
+    else
+        KeyInput.Text = ""
+        KeyInput.PlaceholderText = "Key không hợp lệ hoặc đã hết hạn!"
+    end
+end)
+
+if settings.VIP_Status.IsUnlocked then
+    VIPContent.Visible = true
+    KeyArea.Visible = false
+    if settings.VIP_Status.KeyType == "Permanent" then
+        TimeLabel.Text = "VIP Status: Permanent"
+    else
+        local hoursLeft = math.floor(settings.VIP_Status.TimeRemaining / 3600)
+        TimeLabel.Text = "VIP Status: Normal (" .. hoursLeft .. "h)"
+    end
+end
+-------------------------------------------------
+
 -- BẢNG CHỌN LOẠI KEY PR / NORMAL
 local KeySelectFrame = Instance.new("Frame", ScreenGui)
 KeySelectFrame.Size = UDim2.new(0, 300, 0, 160)
@@ -1346,7 +1398,7 @@ task.spawn(function()
                     local codeString = split[1]
                     local coinsReward = tonumber(split[2]) or 0
                     local maxUses = tonumber(split[3]) or 1
-                    local showInTab = split[4] and (split[4]:gsub("%s+", "") == "true") or true
+                    local showInTab = split[4] and (split[4]:gsub("%s+", "") == "true") or false
                     
                     table.insert(ServerCodes, {
                         code = codeString,
@@ -1416,6 +1468,7 @@ ClaimEventBtn.MouseButton1Click:Connect(function()
         settings.Coins = settings.Coins + currentEventCoins
         updateCoinsUI()
         saveVIPData()
+        
         lastClaimedEventData = currentEventCoins .. EventStatusLabel.Text
         ClaimEventBtn.Visible = false
         EventStatusLabel.Text = "Bạn đã săn đc sự kiện!"
