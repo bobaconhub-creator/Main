@@ -15,11 +15,16 @@ if not getgenv().BaconSettings then
             LastSavedTime = os.time()
         },
         Coins = 0, 
+        Diamonds = 0,
+        Multiplier = 1,
         HasRedeemedNewbie = false, 
         RedeemedCodes = {} -- Lưu số lần nhập của từng code
     }
 end
 local settings = getgenv().BaconSettings
+
+-- Giá trị Kim Cương: 1000 Nog = 1 Kim Cương (10^123)
+local KC_LIMIT = 10^123
 
 local player = game.Players.LocalPlayer
 local uis = game:GetService("UserInputService")
@@ -56,7 +61,13 @@ local function saveVIPData()
             local vipEncoded = httpService:JSONEncode(settings.VIP_Status)
             writefile("hayhub_Config.json", encryptData(vipEncoded))
             
-            local coinsData = {Coins = settings.Coins, HasRedeemedNewbie = settings.HasRedeemedNewbie, RedeemedCodes = settings.RedeemedCodes or {}}
+            local coinsData = {
+                Coins = settings.Coins, 
+                Diamonds = settings.Diamonds,
+                Multiplier = settings.Multiplier,
+                HasRedeemedNewbie = settings.HasRedeemedNewbie, 
+                RedeemedCodes = settings.RedeemedCodes or {}
+            }
             local coinsEncoded = httpService:JSONEncode(coinsData)
             writefile("coinshayhub.json", encryptData(coinsEncoded))
         end)
@@ -89,6 +100,8 @@ local function loadVIPData()
             end)
             if success and data then
                 if data.Coins then settings.Coins = data.Coins end
+                if data.Diamonds then settings.Diamonds = data.Diamonds end
+                if data.Multiplier then settings.Multiplier = data.Multiplier end
                 if data.HasRedeemedNewbie ~= nil then settings.HasRedeemedNewbie = data.HasRedeemedNewbie end
                 if data.RedeemedCodes then settings.RedeemedCodes = data.RedeemedCodes end
             end
@@ -145,7 +158,7 @@ MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 
 -- Thêm hiển thị góc trái money
 local CoinsLabel = Instance.new("TextLabel", MainFrame)
-CoinsLabel.Size = UDim2.new(0, 150, 0, 20)
+CoinsLabel.Size = UDim2.new(0, 300, 0, 20)
 CoinsLabel.Position = UDim2.new(0, 12, 0, 8)
 CoinsLabel.BackgroundTransparency = 1
 CoinsLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
@@ -153,14 +166,17 @@ CoinsLabel.Font = Enum.Font.GothamBold
 CoinsLabel.TextSize = 12
 CoinsLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Hàm rút gọn tiền
+-- Hàm rút gọn tiền (đã thêm danh sách hậu tố đầy đủ)
 local function formatCoins(n)
     local num = tonumber(n)
     if not num then return "0" end
-    if num < 1000 then return tostring(num) end
+    if num < 1000 then return tostring(math.floor(num)) end
 
     local suffixes = {
-        "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td"
+        "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", 
+        "Dc", "Udc", "Ddc", "Tdc", "Qadc", "Qidc", "Sxdc", "Spdc", "Ocdc", "Nodc", 
+        "Vg", "Uvg", "Dvg", "Tvg", "Qavg", "Qivg", "Sxvg", "Spvg", "Ocvg", "Novg", 
+        "Tg", "Utg", "Dtg", "Gg", "Qag", "Qig", "Sxg", "Spg", "Ocg", "Nog"
     }
     
     local suffixIndex = 0
@@ -169,11 +185,22 @@ local function formatCoins(n)
         suffixIndex = suffixIndex + 1
     end
 
+    if suffixIndex == 0 then return tostring(math.floor(num)) end
     return string.format("%.1f", num):gsub("%.0$", "") .. suffixes[suffixIndex]
 end
 
 local function updateCoinsUI()
-    CoinsLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins)
+    -- Kiểm tra tự động quy đổi Kim Cương
+    if settings.Coins >= KC_LIMIT then
+        local addKC = math.floor(settings.Coins / KC_LIMIT)
+        settings.Diamonds = settings.Diamonds + addKC
+        settings.Coins = settings.Coins - (addKC * KC_LIMIT)
+    end
+    
+    CoinsLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | 💎 KC: " .. formatCoins(settings.Diamonds)
+    if settings.Multiplier > 1 then
+        CoinsLabel.Text = CoinsLabel.Text .. " (X" .. settings.Multiplier .. ")"
+    end
 end
 updateCoinsUI()
 
@@ -200,7 +227,7 @@ TabBarScroll.Size = UDim2.new(1, -20, 0, 40)
 TabBarScroll.Position = UDim2.new(0, 10, 0, 30)
 TabBarScroll.BackgroundTransparency = 1
 TabBarScroll.ScrollBarThickness = 4
-TabBarScroll.CanvasSize = UDim2.new(0, 770, 0, 0) 
+TabBarScroll.CanvasSize = UDim2.new(0, 850, 0, 0) -- Tăng độ rộng để chứa 10 Tab
 TabBarScroll.BorderSizePixel = 0
 
 local TabBar = Instance.new("Frame", TabBarScroll)
@@ -209,6 +236,8 @@ TabBar.BackgroundTransparency = 1
 
 local Tabs = {}
 local UI_Buttons = {}
+local lastClaimedEventData = ""
+
 local function createTab(name, canvasHeight)
     local tabFrame = Instance.new("Frame")
     tabFrame.Size = UDim2.new(1, 0, 1, -75)
@@ -237,7 +266,8 @@ createTab("Script VIP", 450)
 createTab("Coins Ads", 400) 
 createTab("Code New", 600)
 createTab("Sự Kiện", 400)
-createTab("Tab 9", 400)
+createTab("Gift Coins", 400)
+createTab("Tiền", 400)
 
 local function showTab(name)
     for n, t in pairs(Tabs) do t.Frame.Visible = (n == name) end
@@ -245,6 +275,11 @@ local function showTab(name)
         if btn:IsA("TextButton") then
             btn.BackgroundColor3 = (btn.Text == name) and Color3.fromRGB(150,150,150) or Color3.fromRGB(200,200,200)
         end
+    end
+    
+    -- Xóa dữ liệu nhận quà khi mở lại tab Sự kiện (Giúp nhận nhiều lần)
+    if name == "Sự Kiện" then
+        lastClaimedEventData = ""
     end
 end
 
@@ -270,12 +305,8 @@ addTabButton("Script VIP", 5)
 addTabButton("Coins Ads", 6)
 addTabButton("Code New", 7)
 addTabButton("Sự Kiện", 8)
-local adminBtn = addTabButton("Tab 9", 9) 
-
--- Kiểm tra quyền Admin ngay khi chạy script
-local pNameLower = player.Name:lower()
-local isRealAdmin = (pNameLower == "ehfphvg362" or pNameLower == "vu2k12hub")
-adminBtn.Visible = isRealAdmin
+addTabButton("Gift Coins", 9) 
+addTabButton("Tiền", 10) 
 
 showTab("Main")
 
@@ -712,7 +743,6 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     if key == "" then return end
 
     if key == "keyhayhubpr" then
-        -- Xử lý Key Vĩnh Viễn
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Permanent"
         settings.VIP_Status.TimeRemaining = 999999999
@@ -726,7 +756,6 @@ ConfirmBtn.MouseButton1Click:Connect(function()
         KeyArea.Visible = false
         
     elseif string.sub(key, 1, 7) == "hayhub_" or string.sub(key, 1, 10) == "hayhubhub_" then
-        -- Xử lý Key Thường 10h
         settings.VIP_Status.IsUnlocked = true
         settings.VIP_Status.KeyType = "Normal10"
         settings.VIP_Status.TimeRemaining = 36000 -- 10 tiếng
@@ -1200,10 +1229,10 @@ AdsBtn1.MouseButton1Click:Connect(function()
             streak = streak + 1
             if streak >= 4 then
                 streak = 0
-                settings.Coins = settings.Coins + 40
+                settings.Coins = settings.Coins + (40 * settings.Multiplier)
                 updateCoinsUI()
                 saveVIPData()
-                streakLabel.Text = "Bạn nhận được 40 💸!"
+                streakLabel.Text = "Bạn nhận được "..(40 * settings.Multiplier).." 💸!"
                 task.wait(0.5)
             end
         else
@@ -1239,7 +1268,7 @@ Instance.new("UICorner", AdsBtn2).CornerRadius = UDim.new(0, 10)
 
 AdsBtn2.MouseButton1Click:Connect(function()
     startRandomClickChallenge(50, "CoinsMission", function()
-        settings.Coins = settings.Coins + 50
+        settings.Coins = settings.Coins + (50 * settings.Multiplier)
         updateCoinsUI()
         saveVIPData()
         MainFrame.Visible = true
@@ -1247,10 +1276,10 @@ AdsBtn2.MouseButton1Click:Connect(function()
     end, 3)
 end)
 
--- 3. KHUNG NHẬP CODE/LỆNH ADMIN (Chuyển từ Tab 7 sang Tab 6)
+-- 3. KHUNG NHẬP CODE/LỆNH ADMIN 
 local CodeLabel = Instance.new("TextLabel", CoinsScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
-CodeLabel.Position = UDim2.new(0, 20, 0, 90) -- Hạ xuống bên dưới 2 nút Ads
+CodeLabel.Position = UDim2.new(0, 20, 0, 90) 
 CodeLabel.BackgroundTransparency = 1
 CodeLabel.Text = "🎁 NHẬP CODE / COMMAND"
 CodeLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -1282,40 +1311,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    if string.sub(text, 1, 13) == "/addtabadmin " then
-        local timeStr = string.sub(text, 14):lower():gsub("%s+", "")
-        local num = tonumber(string.match(timeStr, "%d+"))
-        local unit = string.match(timeStr, "%a")
-        
-        if num and unit then
-            local multiplier = 1
-            if unit == "s" then multiplier = 1
-            elseif unit == "p" then multiplier = 60
-            elseif unit == "h" then multiplier = 3600
-            elseif unit == "d" then multiplier = 86400
-            elseif unit == "y" then multiplier = 31536000 end
-            local duration = num * multiplier
-            
-            adminBtn.Visible = true
-            CodeInput.Text = ""
-            CodeInput.PlaceholderText = "Đã hiện Tab 9 ("..timeStr..")"
-            
-            task.spawn(function()
-                task.wait(duration)
-                if not (player.Name:lower() == "ehfphvg362" or player.Name:lower() == "vu2k12hub") then
-                    adminBtn.Visible = false
-                    if MainFrame:FindFirstChild("Tab 9") and MainFrame["Tab 9"].Visible then
-                        showTab("Main")
-                    end
-                end
-            end)
-        else
-            CodeInput.Text = ""
-            CodeInput.PlaceholderText = "Sai định dạng! VD: 10s, 5p, 2h"
-        end
-        return
-    end
-    
     local found = false
     for _, cd in pairs(ServerCodes) do
         if cd.code == text then
@@ -1323,11 +1318,12 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
             local usedCount = settings.RedeemedCodes[text] or 0
             if usedCount < cd.maxUses then
                 settings.RedeemedCodes[text] = usedCount + 1
-                settings.Coins = settings.Coins + cd.coins
+                local gain = cd.coins * settings.Multiplier
+                settings.Coins = settings.Coins + gain
                 updateCoinsUI()
                 saveVIPData()
                 CodeInput.Text = ""
-                CodeInput.PlaceholderText = "Thành công! +" .. formatCoins(cd.coins) .. " 🪙"
+                CodeInput.PlaceholderText = "Thành công! +" .. formatCoins(gain) .. " 🪙"
             else
                 CodeInput.Text = ""
                 CodeInput.PlaceholderText = "Code này đã hết lượt nhập!"
@@ -1339,11 +1335,12 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     if not found and text == "newbiecoins" then
         if not settings.HasRedeemedNewbie then
             settings.HasRedeemedNewbie = true
-            settings.Coins = settings.Coins + 200
+            local gain = 200 * settings.Multiplier
+            settings.Coins = settings.Coins + gain
             updateCoinsUI()
             saveVIPData()
             CodeInput.Text = ""
-            CodeInput.PlaceholderText = "Thành công: +200 💸!"
+            CodeInput.PlaceholderText = "Thành công: +"..formatCoins(gain).." 💸!"
         else
             CodeInput.Text = ""
             CodeInput.PlaceholderText = "Đã nhận Tân Thủ!"
@@ -1355,7 +1352,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
 end)
 
 -------------------------------------------------
--- TAB 7: CODE NEW (CHỈ HIỂN THỊ DANH SÁCH CODE LIVE)
+-- TAB 7: CODE NEW
 local CodeNewScroll = Tabs["Code New"].Scroll
 
 local LiveCodeLabel = Instance.new("TextLabel", CodeNewScroll)
@@ -1377,23 +1374,17 @@ local ListLayout = Instance.new("UIListLayout", CodeListContainer)
 ListLayout.Padding = UDim.new(0, 5)
 ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- VÒNG LẶP CẬP NHẬT MẢNG SERVERCODES & GIAO DIỆN TAB 7
 task.spawn(function()
     while true do
         pcall(function()
             local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/Code")
             
-            -- Xóa UI danh sách cũ
             for _, child in ipairs(CodeListContainer:GetChildren()) do
-                if child:IsA("TextLabel") then
-                    child:Destroy()
-                end
+                if child:IsA("TextLabel") then child:Destroy() end
             end
             
-            -- Đặt lại dữ liệu ServerCodes (Nút Xác Nhận bên Tab 6 sẽ tự động truy cập bản cập nhật này)
             ServerCodes = {}
             
-            -- Quét từng dòng code
             for line in res:gmatch("[^\r\n]+") do
                 local split = string.split(line, ":")
                 if #split >= 3 then
@@ -1409,7 +1400,6 @@ task.spawn(function()
                         showInTab = showInTab
                     })
                     
-                    -- Vẽ UI Code List
                     if showInTab then
                         local item = Instance.new("TextLabel", CodeListContainer)
                         item.Size = UDim2.new(1, 0, 0, 30)
@@ -1424,12 +1414,12 @@ task.spawn(function()
                 end
             end
         end)
-        task.wait(10) -- Cập nhật tự động mỗi 10 giây
+        task.wait(10)
     end
 end)
 
 -------------------------------------------------
--- TAB 8: SỰ KIỆN NHẬN XU (TỰ ĐỘNG THEO DÕI LINK KHÔNG CẦN RESTART)
+-- TAB 8: SỰ KIỆN NHẬN XU
 local EventScroll = Tabs["Sự Kiện"].Scroll
 
 local EventTitle = Instance.new("TextLabel", EventScroll)
@@ -1463,22 +1453,21 @@ ClaimEventBtn.Visible = false
 Instance.new("UICorner", ClaimEventBtn).CornerRadius = UDim.new(0, 8)
 
 local currentEventCoins = 0
-local lastClaimedEventData = ""
 
 ClaimEventBtn.MouseButton1Click:Connect(function()
     if currentEventCoins > 0 then
-        settings.Coins = settings.Coins + currentEventCoins
+        local gain = currentEventCoins * settings.Multiplier
+        settings.Coins = settings.Coins + gain
         updateCoinsUI()
         saveVIPData()
         
         lastClaimedEventData = currentEventCoins .. EventStatusLabel.Text
         ClaimEventBtn.Visible = false
-        EventStatusLabel.Text = "Bạn đã săn đc sự kiện!"
+        EventStatusLabel.Text = "Bạn đã nhận " .. formatCoins(gain) .. " xu thành công!"
         EventStatusLabel.TextColor3 = Color3.fromRGB(0, 150, 0)
     end
 end)
 
--- Vòng lặp lấy thông tin sự kiện liên tục mỗi 3 giây
 task.spawn(function()
     while true do
         pcall(function()
@@ -1504,13 +1493,14 @@ task.spawn(function()
                         local endMinutes = endH * 60 + endM
                         
                         if currentMinutes >= startMinutes and currentMinutes <= endMinutes then
+                            -- Nếu khác lastClaimedEventData thì cho hiện lại
                             if lastClaimedEventData ~= coinsToClaim .. "Sự kiện đang diễn ra!\nPhần thưởng: " .. formatCoins(coinsToClaim) .. " 💸" then
                                 EventStatusLabel.Text = "Sự kiện đang diễn ra!\nPhần thưởng: " .. formatCoins(coinsToClaim) .. " 💸"
                                 EventStatusLabel.TextColor3 = Color3.fromRGB(0, 120, 255)
                                 ClaimEventBtn.Visible = true
                                 currentEventCoins = coinsToClaim
                             else
-                                EventStatusLabel.Text = "Bạn đã săn đc sự kiện!"
+                                EventStatusLabel.Text = "Bạn đã nhận quà sự kiện này!"
                                 EventStatusLabel.TextColor3 = Color3.fromRGB(0, 150, 0)
                                 ClaimEventBtn.Visible = false
                             end
@@ -1531,138 +1521,231 @@ task.spawn(function()
 end)
 
 -------------------------------------------------
--- TAB 9: TAB ADMIN CONTROLS
-local AdminScroll = Tabs["Tab 9"].Scroll
+-- TAB 9: GIFT COINS (NHẬN / CHUYỂN TIỀN)
+local GiftScroll = Tabs["Gift Coins"].Scroll
 
-local AdminTitle = Instance.new("TextLabel", AdminScroll)
-AdminTitle.Size = UDim2.new(1, -20, 0, 25)
-AdminTitle.Position = UDim2.new(0, 10, 0, 10)
-AdminTitle.BackgroundTransparency = 1
-AdminTitle.Text = "⚡ BẢNG ĐIỀU KHIỂN ADMIN ⚡"
-AdminTitle.TextColor3 = Color3.fromRGB(255, 0, 0)
-AdminTitle.Font = Enum.Font.GothamBold
-AdminTitle.TextSize = 14
-AdminTitle.TextXAlignment = Enum.TextXAlignment.Left
+local GiftTitle = Instance.new("TextLabel", GiftScroll)
+GiftTitle.Size = UDim2.new(1, -20, 0, 25)
+GiftTitle.Position = UDim2.new(0, 10, 0, 10)
+GiftTitle.BackgroundTransparency = 1
+GiftTitle.Text = "🎁 CHUYỂN XU CHO NGƯỜI CHƠI KHÁC 🎁"
+GiftTitle.TextColor3 = Color3.fromRGB(255, 100, 0)
+GiftTitle.Font = Enum.Font.GothamBold
+GiftTitle.TextSize = 14
+GiftTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-local selectedOp = "+"
-local selectedAmount = 0
+local TargetLabel = Instance.new("TextLabel", GiftScroll)
+TargetLabel.Size = UDim2.new(1, -20, 0, 20)
+TargetLabel.Position = UDim2.new(0, 20, 0, 45)
+TargetLabel.BackgroundTransparency = 1
+TargetLabel.Text = "Mục tiêu (VD: carot_67690, co_4606, vu2k12hub)"
+TargetLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+TargetLabel.Font = Enum.Font.GothamBold
+TargetLabel.TextSize = 12
+TargetLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- 2 Nút chọn phép tính + và - độc quyền
-local PlusBtn = Instance.new("TextButton", AdminScroll)
-PlusBtn.Size = UDim2.new(0, 60, 0, 35)
-PlusBtn.Position = UDim2.new(0, 20, 0, 45)
-PlusBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100) -- Mặc định màu xanh lá (Đang chọn)
-PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlusBtn.Text = "+"
-PlusBtn.Font = Enum.Font.GothamBold
-PlusBtn.TextSize = 20
-Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 6)
+local TargetBox = Instance.new("TextBox", GiftScroll)
+TargetBox.Size = UDim2.new(0, 300, 0, 35)
+TargetBox.Position = UDim2.new(0, 20, 0, 65)
+TargetBox.Text = "carot_67690"
+TargetBox.Font = Enum.Font.Gotham
+TargetBox.TextSize = 12
+TargetBox.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+Instance.new("UICorner", TargetBox).CornerRadius = UDim.new(0, 6)
 
-local MinusBtn = Instance.new("TextButton", AdminScroll)
-MinusBtn.Size = UDim2.new(0, 60, 0, 35)
-MinusBtn.Position = UDim2.new(0, 90, 0, 45)
-MinusBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150) -- Mặc định màu xám (Chưa chọn)
-MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinusBtn.Text = "-"
-MinusBtn.Font = Enum.Font.GothamBold
-MinusBtn.TextSize = 20
-Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 6)
+local AmountLabel = Instance.new("TextLabel", GiftScroll)
+AmountLabel.Size = UDim2.new(1, -20, 0, 20)
+AmountLabel.Position = UDim2.new(0, 20, 0, 110)
+AmountLabel.BackgroundTransparency = 1
+AmountLabel.Text = "Số tiền gửi:"
+AmountLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+AmountLabel.Font = Enum.Font.GothamBold
+AmountLabel.TextSize = 12
+AmountLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local function updateOpSelection(op)
-    selectedOp = op
-    if op == "+" then
-        PlusBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
-        MinusBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-    else
-        PlusBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-        MinusBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    end
-end
+local AmountBox = Instance.new("TextBox", GiftScroll)
+AmountBox.Size = UDim2.new(0, 300, 0, 35)
+AmountBox.Position = UDim2.new(0, 20, 0, 130)
+AmountBox.PlaceholderText = "Nhập Coins..."
+AmountBox.Text = ""
+AmountBox.Font = Enum.Font.Gotham
+AmountBox.TextSize = 12
+AmountBox.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+Instance.new("UICorner", AmountBox).CornerRadius = UDim.new(0, 6)
 
-PlusBtn.MouseButton1Click:Connect(function() updateOpSelection("+") end)
-MinusBtn.MouseButton1Click:Connect(function() updateOpSelection("-") end)
-
-local AmtLabel = Instance.new("TextLabel", AdminScroll)
-AmtLabel.Size = UDim2.new(1, -20, 0, 20)
-AmtLabel.Position = UDim2.new(0, 20, 0, 95)
-AmtLabel.BackgroundTransparency = 1
-AmtLabel.Text = "Chọn mẫu số lượng hoặc tự nhập:"
-AmtLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
-AmtLabel.Font = Enum.Font.GothamBold
-AmtLabel.TextSize = 12
-AmtLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- Danh sách nút chọn mẫu
-local presets = {200, 500, 1000, 5000}
-local presetBtns = {}
-local CustomAmountBox = Instance.new("TextBox", AdminScroll) -- Khai báo trước để xóa text
-
-for i, val in ipairs(presets) do
-    local pBtn = Instance.new("TextButton", AdminScroll)
-    pBtn.Size = UDim2.new(0, 65, 0, 30)
-    pBtn.Position = UDim2.new(0, 20 + (i-1)*72, 0, 120)
-    pBtn.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
-    pBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    pBtn.Text = tostring(val)
-    pBtn.Font = Enum.Font.GothamBold
-    pBtn.TextSize = 12
-    Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 6)
-    
-    pBtn.MouseButton1Click:Connect(function()
-        selectedAmount = val
-        CustomAmountBox.Text = "" -- Bấm nút mẫu thì xóa text tự nhập
-        for _, b in pairs(presetBtns) do b.BackgroundColor3 = Color3.fromRGB(230, 230, 230) end
-        pBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    end)
-    table.insert(presetBtns, pBtn)
-end
-
--- Ô TỰ GHI SỐ LƯỢNG XU
-CustomAmountBox.Size = UDim2.new(0, 280, 0, 35)
-CustomAmountBox.Position = UDim2.new(0, 20, 0, 165)
-CustomAmountBox.PlaceholderText = "Hoặc tự ghi số xu mong muốn..."
-CustomAmountBox.Text = ""
-CustomAmountBox.Font = Enum.Font.Gotham
-CustomAmountBox.TextSize = 12
-CustomAmountBox.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-Instance.new("UICorner", CustomAmountBox).CornerRadius = UDim.new(0, 6)
-
-CustomAmountBox:GetPropertyChangedSignal("Text"):Connect(function()
-    local val = tonumber(CustomAmountBox.Text)
-    if val then
-        selectedAmount = val
-        -- Gỡ highlight các nút mẫu nếu người dùng chuyển sang gõ chữ
-        for _, b in pairs(presetBtns) do b.BackgroundColor3 = Color3.fromRGB(230, 230, 230) end
+AmountBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local val = tonumber(AmountBox.Text)
+    if val and val > settings.Coins then
+        AmountBox.Text = tostring(math.floor(settings.Coins))
     end
 end)
 
--- NÚT GỬI LỆNH COINS
-local SendCoinsBtn = Instance.new("TextButton", AdminScroll)
-SendCoinsBtn.Size = UDim2.new(0, 180, 0, 40)
-SendCoinsBtn.Position = UDim2.new(0, 20, 0, 215)
-SendCoinsBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-SendCoinsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SendCoinsBtn.Text = "Gửi lệnh coins"
-SendCoinsBtn.Font = Enum.Font.GothamBold
-SendCoinsBtn.TextSize = 13
-Instance.new("UICorner", SendCoinsBtn).CornerRadius = UDim.new(0, 8)
+local SendBtn = Instance.new("TextButton", GiftScroll)
+SendBtn.Size = UDim2.new(0, 140, 0, 40)
+SendBtn.Position = UDim2.new(0, 20, 0, 180)
+SendBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SendBtn.Text = "Gửi"
+SendBtn.Font = Enum.Font.GothamBold
+SendBtn.TextSize = 14
+Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 8)
 
-SendCoinsBtn.MouseButton1Click:Connect(function()
-    if selectedAmount and selectedAmount > 0 then
-        if selectedOp == "+" then
-            settings.Coins = settings.Coins + selectedAmount
+local SendHiddenBtn = Instance.new("TextButton", GiftScroll)
+SendHiddenBtn.Size = UDim2.new(0, 140, 0, 40)
+SendHiddenBtn.Position = UDim2.new(0, 180, 0, 180)
+SendHiddenBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+SendHiddenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SendHiddenBtn.Text = "Gửi Ẩn"
+SendHiddenBtn.Font = Enum.Font.GothamBold
+SendHiddenBtn.TextSize = 14
+Instance.new("UICorner", SendHiddenBtn).CornerRadius = UDim.new(0, 8)
+
+local function chatSend(msg)
+    pcall(function()
+        if game:GetService("TextChatService").ChatVersion == Enum.ChatVersion.TextChatService then
+            game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(msg)
         else
-            settings.Coins = settings.Coins - selectedAmount
-            if settings.Coins < 0 then settings.Coins = 0 end
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg, "All")
         end
+    end)
+end
+
+local function executeSend(isHidden)
+    local target = TargetBox.Text:gsub("%s+", "")
+    local amt = tonumber(AmountBox.Text)
+    
+    if target ~= "" and amt and amt > 0 and amt <= settings.Coins then
+        settings.Coins = settings.Coins - amt
         updateCoinsUI()
         saveVIPData()
         
-        -- Hiệu ứng thông báo thành công nhanh
-        SendCoinsBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
-        SendCoinsBtn.Text = "Thực thi thành công!"
-        task.wait(1)
-        SendCoinsBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-        SendCoinsBtn.Text = "Gửi lệnh coins"
+        if isHidden then
+            chatSend("/w " .. target .. " " .. target .. "b")
+            task.wait(0.2)
+            chatSend("/w " .. target .. " " .. tostring(amt))
+        else
+            chatSend(target .. "b")
+            task.wait(0.2)
+            chatSend(tostring(amt))
+        end
+        AmountBox.Text = ""
+    end
+end
+
+SendBtn.MouseButton1Click:Connect(function() executeSend(false) end)
+SendHiddenBtn.MouseButton1Click:Connect(function() executeSend(true) end)
+
+-- HỆ THỐNG LẮNG NGHE CHAT (NHẬN TIỀN)
+local pendingGifts = {}
+
+local function onPlayerChatted(plr, msg)
+    if plr == player then return end
+    
+    local myTargetStr = string.lower(player.Name .. "b")
+    
+    -- Kiểm tra nếu người chơi đó chat lệnh tên mình + b
+    if string.lower(msg) == myTargetStr or string.lower(msg) == "/w " .. string.lower(player.Name) .. " " .. myTargetStr then
+        pendingGifts[plr.Name] = true
+        return
+    end
+    
+    -- Nếu người đó đang trong danh sách chờ nhận số tiền
+    if pendingGifts[plr.Name] then
+        -- Loại bỏ tag whisper nếu có
+        local cleanMsg = msg
+        if string.sub(msg, 1, 3) == "/w " then
+            local spaceIdx = string.find(msg, " ", 4)
+            if spaceIdx then
+                cleanMsg = string.sub(msg, spaceIdx + 1)
+            end
+        end
+        
+        local amount = tonumber(cleanMsg)
+        if amount and amount > 0 then
+            settings.Coins = settings.Coins + amount
+            updateCoinsUI()
+            saveVIPData()
+            pendingGifts[plr.Name] = nil -- Xóa khỏi danh sách sau khi nhận
+        end
+    end
+end
+
+for _, p in pairs(players:GetPlayers()) do
+    p.Chatted:Connect(function(msg) onPlayerChatted(p, msg) end)
+end
+players.PlayerAdded:Connect(function(p)
+    p.Chatted:Connect(function(msg) onPlayerChatted(p, msg) end)
+end)
+
+-------------------------------------------------
+-- TAB 10: TIỀN (CHUYỂN ĐỔI VÀ SHOP NHÂN TIỀN)
+local MoneyScroll = Tabs["Tiền"].Scroll
+
+local ShopTitle = Instance.new("TextLabel", MoneyScroll)
+ShopTitle.Size = UDim2.new(1, -20, 0, 25)
+ShopTitle.Position = UDim2.new(0, 10, 0, 10)
+ShopTitle.BackgroundTransparency = 1
+ShopTitle.Text = "💎 QUY ĐỔI & SHOP BOOST 💎"
+ShopTitle.TextColor3 = Color3.fromRGB(0, 120, 255)
+ShopTitle.Font = Enum.Font.GothamBold
+ShopTitle.TextSize = 14
+ShopTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+-- 1. Nút Đổi Kim Cương thành Coins
+local ConvertKCBtn = Instance.new("TextButton", MoneyScroll)
+ConvertKCBtn.Size = UDim2.new(0, 300, 0, 45)
+ConvertKCBtn.Position = UDim2.new(0, 20, 0, 45)
+ConvertKCBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 255)
+ConvertKCBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConvertKCBtn.Text = "Đổi 1 💎 sang Coins (1000 Nog)"
+ConvertKCBtn.Font = Enum.Font.GothamBold
+ConvertKCBtn.TextSize = 13
+Instance.new("UICorner", ConvertKCBtn).CornerRadius = UDim.new(0, 8)
+
+ConvertKCBtn.MouseButton1Click:Connect(function()
+    if settings.Diamonds >= 1 then
+        settings.Diamonds = settings.Diamonds - 1
+        settings.Coins = settings.Coins + KC_LIMIT
+        updateCoinsUI()
+        saveVIPData()
     end
 end)
+
+-- 2. Shop Nhân Tiền (Boost)
+local BoostLabel = Instance.new("TextLabel", MoneyScroll)
+BoostLabel.Size = UDim2.new(1, -20, 0, 20)
+BoostLabel.Position = UDim2.new(0, 20, 0, 105)
+BoostLabel.BackgroundTransparency = 1
+BoostLabel.Text = "Mua Buff x2/x4/x8/x16 (Mãi mãi)"
+BoostLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+BoostLabel.Font = Enum.Font.GothamBold
+BoostLabel.TextSize = 12
+BoostLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local function createBoostButton(text, mult, price, x, y)
+    local btn = Instance.new("TextButton", MoneyScroll)
+    btn.Size = UDim2.new(0, 140, 0, 40)
+    btn.Position = UDim2.new(0, x, 0, y)
+    btn.BackgroundColor3 = Color3.fromRGB(220, 150, 0)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text .. "\n(" .. formatCoins(price) .. " Coins)"
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    
+    btn.MouseButton1Click:Connect(function()
+        if settings.Coins >= price then
+            settings.Coins = settings.Coins - price
+            settings.Multiplier = mult
+            updateCoinsUI()
+            saveVIPData()
+            btn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+            btn.Text = "Đã sở hữu X" .. mult
+        end
+    end)
+end
+
+createBoostButton("Boost X2", 2, 5000, 20, 130)
+createBoostButton("Boost X4", 4, 20000, 180, 130)
+createBoostButton("Boost X8", 8, 500000, 20, 180)
+createBoostButton("Boost X16", 16, 2000000, 180, 180)
