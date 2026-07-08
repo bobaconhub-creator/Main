@@ -1,0 +1,330 @@
+--[[
+    MENU ĐA NĂNG TỐI ƯU (ANTI-LAG)
+    Chủ đề: Trắng (White Theme) + Aura Phát Sáng + Bo Góc
+    Tính năng: Aimbot (Instant, TeamCheck, FOV) + ESP 2D (Box, Line)
+--]]
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+------------------------------------------------------------------------
+-- CẤU HÌNH HỆ THỐNG (SETTINGS)
+------------------------------------------------------------------------
+local Config = {
+    Aimbot = false,
+    TeamCheck = true,
+    FOV = 150,
+    ESP = false
+}
+
+local ESP_Cache = {}
+
+------------------------------------------------------------------------
+-- TẠO GIAO DIỆN (UI INJECTION)
+------------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AuraMenu_2026"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Khung Menu Chính (Main Frame)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 320, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -160, 0.4, -120)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- Hiệu ứng Phát Sáng Aura (UIStroke)
+local UIEffect = Instance.new("UIStroke")
+UIEffect.Color = Color3.fromRGB(240, 240, 255)
+UIEffect.Thickness = 3
+UIEffect.Transparency = 0.2
+UIEffect.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIEffect.Parent = MainFrame
+
+-- Thanh chứa Tab (Navigation)
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 40)
+TabBar.BackgroundTransparency = 1
+TabBar.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.FillDirection = Enum.FillDirection.Horizontal
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = TabBar
+
+-- Khung chứa nội dung các Tab
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 1, -40)
+ContentFrame.Position = UDim2.new(0, 0, 0, 40)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local Tabs = {}
+local function CreateTab(name, order)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0.333, 0, 1, 0)
+    Button.BackgroundTransparency = 1
+    Button.Text = name
+    Button.Font = Enum.Font.SourceSansBold
+    Button.TextSize = 14
+    Button.TextColor3 = Color3.fromRGB(100, 100, 100)
+    Button.LayoutOrder = order
+    Button.Parent = TabBar
+
+    local Page = Instance.new("Frame")
+    Page.Size = UDim2.new(1, -20, 1, -20)
+    Page.Position = UDim2.new(0, 10, 0, 10)
+    Page.BackgroundTransparency = 1
+    Page.Visible = (order == 1)
+    Page.Parent = ContentFrame
+
+    if order == 1 then Button.TextColor3 = Color3.fromRGB(0, 0, 0) end
+
+    Button.MouseButton1Click:Connect(function()
+        for _, t in pairs(Tabs) do
+            t.Page.Visible = false
+            t.Btn.TextColor3 = Color3.fromRGB(100, 100, 100)
+        end
+        Page.Visible = true
+        Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+    end)
+
+    Tabs[name] = {Page = Page, Btn = Button}
+    return Page
+end
+
+local AimPage = CreateTab("Aim", 1)
+local SettingPage = CreateTab("Settings", 2)
+local ESPPage = CreateTab("ESP", 3)
+
+------------------------------------------------------------------------
+-- ĐỊNH DẠNG COMPONENT (TOGGLE SWITCH & TEXTBOX)
+------------------------------------------------------------------------
+-- Hàm tạo Nút Bật/Tắt Hình tròn Animation trượt mượt mà
+local function CreateToggle(parent, text, callback)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, 0, 0, 40)
+    Row.BackgroundTransparency = 1
+    Row.Parent = parent
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.7, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.Font = Enum.Font.SourceSans
+    Label.TextSize = 16
+    Label.TextColor3 = Color3.fromRGB(50, 50, 50)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Row
+
+    local Switch = Instance.new("TextButton")
+    Switch.Size = UDim2.new(0, 45, 0, 22)
+    Switch.Position = UDim2.new(1, -45, 0.5, -11)
+    Switch.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+    Switch.Text = ""
+    Switch.Parent = Row
+    Instance.new("UICorner").CornerRadius = UDim.new(1, 0)
+
+    local Circle = Instance.new("Frame")
+    Circle.Size = UDim2.new(0, 18, 0, 18)
+    Circle.Position = UDim2.new(0, 2, 0, 2)
+    Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Circle.Parent = Switch
+    Instance.new("UICorner").CornerRadius = UDim.new(1, 0)
+
+    local state = false
+    Switch.MouseButton1Click:Connect(function()
+        state = not state
+        local targetX = state and 25 or 2
+        local targetColor = state and Color3.fromRGB(100, 180, 255) or Color3.fromRGB(220, 220, 220)
+        
+        TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, targetX, 0, 2)}):Play()
+        TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+        
+        callback(state)
+    end)
+end
+
+-- Khởi tạo các nút bấm dựa trên cấu trúc trên
+CreateToggle(AimPage, "Bật Aimbot", function(v) Config.Aimbot = v end)
+CreateToggle(SettingPage, "Kiểm Tra Đồng Đội (TeamCheck)", function(v) Config.TeamCheck = v end)
+CreateToggle(ESPPage, "Bật ESP 2D", function(v) Config.ESP = v end)
+
+-- Ô Nhập Liệu FOV (TextBox) trong tab Settings
+local FovRow = Instance.new("Frame")
+FovRow.Size = UDim2.new(1, 0, 0, 40)
+FovRow.BackgroundTransparency = 1
+FovRow.Parent = SettingPage
+
+local FovLabel = Instance.new("TextLabel")
+FovLabel.Size = UDim2.new(0.6, 0, 1, 0)
+FovLabel.BackgroundTransparency = 1
+FovLabel.Text = "Kích Thước Vòng Tròn FOV:"
+FovLabel.Font = Enum.Font.SourceSans
+FovLabel.TextSize = 16
+FovLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
+FovLabel.TextXAlignment = Enum.TextXAlignment.Left
+FovLabel.Parent = FovRow
+
+local FovInput = Instance.new("TextBox")
+FovInput.Size = UDim2.new(0, 60, 0, 25)
+FovInput.Position = UDim2.new(1, -60, 0.5, -12)
+FovInput.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+FovInput.Text = tostring(Config.FOV)
+FovInput.Font = Enum.Font.SourceSansBold
+FovInput.TextSize = 14
+FovInput.TextColor3 = Color3.fromRGB(0, 0, 0)
+FovInput.Parent = FovRow
+Instance.new("UICorner").CornerRadius = UDim.new(0, 4)
+
+FovInput.FocusLost:Connect(function(enter)
+    local num = tonumber(FovInput.Text)
+    if num then Config.FOV = num else FovInput.Text = tostring(Config.FOV) end
+end)
+
+------------------------------------------------------------------------
+-- LOGIC KÉO THẢ MENU (DRAGGING PROCESS)
+------------------------------------------------------------------------
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
+
+------------------------------------------------------------------------
+-- HỆ THỐNG VẼ FOV & ESP (DRAWING API - ANTI-LAG)
+------------------------------------------------------------------------
+-- Vòng tròn FOV Aura
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Filled = false
+
+-- Hàm tạo cấu trúc đồ họa ESP cho Player mới
+local function CreateESP(player)
+    if ESP_Cache[player] then return end
+    
+    local Box = Drawing.new("Square")
+    Box.Thickness = 1
+    Box.Filled = false
+    Box.Color = Color3.fromRGB(255, 255, 255)
+    
+    local Line = Drawing.new("Line")
+    Line.Thickness = 1
+    Line.Color = Color3.fromRGB(255, 255, 255)
+
+    ESP_Cache[player] = {Box = Box, Line = Line}
+end
+
+local function RemoveESP(player)
+    if ESP_Cache[player] then
+        ESP_Cache[player].Box:Remove()
+        ESP_Cache[player].Line:Remove()
+        ESP_Cache[player].Nil = nil
+    end
+end
+
+Players.PlayerAdded:Connect(CreateESP)
+Players.PlayerRemoving:Connect(RemoveESP)
+for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreateESP(p) end end
+
+------------------------------------------------------------------------
+-- VÒNG LẶP CHÍNH CẬP NHẬT TỌA ĐỘ (RENDERSTEPPED HƠN HEARTBEAT)
+------------------------------------------------------------------------
+-- Tìm mục tiêu gần nhất thoả mãn điều kiện
+local function GetClosestTarget()
+    local target = nil
+    local maxDist = Config.FOV
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if Config.TeamCheck and player.Team == LocalPlayer.Team then continue end
+            
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                if dist < maxDist then
+                    maxDist = dist
+                    target = player.Character.HumanoidRootPart
+                end
+            end
+        end
+    end
+    return target
+end
+
+RunService.RenderStepped:Connect(function()
+    local mousePos = UserInputService:GetMouseLocation()
+    
+    -- Cập nhật FOV tròn phát sáng Aura
+    if Config.Aimbot then
+        FOVCircle.Position = mousePos
+        FOVCircle.Radius = Config.FOV
+        FOVCircle.Visible = true
+        
+        -- Thực thi Khóa tâm lập tức (Instant Lock)
+        local target = GetClosestTarget()
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+        end
+    else
+        FOVCircle.Visible = false
+    end
+
+    -- Cập nhật Vẽ ESP (Box + Tracer Line)
+    for player, draw in pairs(ESP_Cache) do
+        if Config.ESP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local rootPart = player.Character.HumanoidRootPart
+            local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+            
+            if onScreen then
+                -- Tính toán kích thước Khung 2D tương thích theo khoảng cách xa gần
+                local head = player.Character:FindFirstChild("Head")
+                local headPos = head and Camera:WorldToViewportPoint(head.Position) or pos
+                local width = (pos.Y - headPos.Y) * 2
+                local height = width * 1.5
+                
+                draw.Box.Size = Vector2.new(width, height)
+                draw.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
+                draw.Box.Visible = true
+
+                -- Vẽ đường kẻ Tracer phát ra từ đáy màn hình của bạn
+                draw.Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                draw.Line.To = Vector2.new(pos.X, pos.Y)
+                draw.Line.Visible = true
+            else
+                draw.Box.Visible = false
+                draw.Line.Visible = false
+            end
+        else
+            draw.Box.Visible = false
+            draw.Line.Visible = false
+        end
+    end
+end)
