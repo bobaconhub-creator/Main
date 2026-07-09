@@ -1,330 +1,687 @@
---[[
-    MENU ĐA NĂNG TỐI ƯU (ANTI-LAG)
-    Chủ đề: Trắng (White Theme) + Aura Phát Sáng + Bo Góc
-    Tính năng: Aimbot (Instant, TeamCheck, FOV) + ESP 2D (Box, Line)
---]]
-
+-- Chuyển đổi tên và mục tiêu ngắm sang Thân (UpperTorso hoặc HumanoidRootPart)
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local UIS = game:GetService("UserInputService")
 
-------------------------------------------------------------------------
--- CẤU HÌNH HỆ THỐNG (SETTINGS)
-------------------------------------------------------------------------
-local Config = {
-    Aimbot = false,
-    TeamCheck = true,
-    FOV = 150,
-    ESP = false
-}
+local player = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
 
-local ESP_Cache = {}
+local teamNumCheck = false
+local teamCheck = false
+local friendCheck = false
+local aimNPC = false
+local priorityTarget = nil
 
-------------------------------------------------------------------------
--- TẠO GIAO DIỆN (UI INJECTION)
-------------------------------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AuraMenu_2026"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local espOn = false
+local espLines = {}
+local espDistance = 100
 
--- Khung Menu Chính (Main Frame)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 320, 0, 240)
-MainFrame.Position = UDim2.new(0.5, -160, 0.4, -120)
-MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
+local autoShot = false
+local lastAutoShot = 0
+local autoShotInterval = 0.12 -- giây giữa các lần tự động bắn
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = MainFrame
+-- Định nghĩa hàm lấy bộ phận Thân một cách linh hoạt (R6 / R15)
+local function getTargetPart(character)
+    if not character then return nil end
+    return character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+end
 
--- Hiệu ứng Phát Sáng Aura (UIStroke)
-local UIEffect = Instance.new("UIStroke")
-UIEffect.Color = Color3.fromRGB(240, 240, 255)
-UIEffect.Thickness = 3
-UIEffect.Transparency = 0.2
-UIEffect.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-UIEffect.Parent = MainFrame
+local function createGUI()
+    if player.PlayerGui:FindFirstChild("AimbotHubMenu") then return end
 
--- Thanh chứa Tab (Navigation)
-local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(1, 0, 0, 40)
-TabBar.BackgroundTransparency = 1
-TabBar.Parent = MainFrame
+    local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+    ScreenGui.Name = "AimbotHubMenu"
+    ScreenGui.ResetOnSpawn = false
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.FillDirection = Enum.FillDirection.Horizontal
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Parent = TabBar
+    -- Giao diện chủ đề màu Trắng (White Theme)
+    local MainFrame = Instance.new("Frame", ScreenGui)
+    MainFrame.Size = UDim2.new(0,340,0,420)
+    MainFrame.Position = UDim2.new(0.5,-170,0.5,-210)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(245, 245, 245) -- Trắng xám nhạt
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,15)
 
--- Khung chứa nội dung các Tab
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, 0, 1, -40)
-ContentFrame.Position = UDim2.new(0, 0, 0, 40)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
+    local OpenBtn = Instance.new("TextButton", ScreenGui)
+    OpenBtn.Size = UDim2.new(0,50,0,50)
+    OpenBtn.Position = UDim2.new(0,20,0.5,-25)
+    OpenBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    OpenBtn.Text = "☰"
+    OpenBtn.TextColor3 = Color3.fromRGB(50, 50, 50) -- Chữ tối màu trên nền trắng
+    OpenBtn.Font = Enum.Font.GothamBold
+    OpenBtn.TextSize = 24
+    OpenBtn.Visible = false
+    Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1,0)
 
-local Tabs = {}
-local function CreateTab(name, order)
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.333, 0, 1, 0)
-    Button.BackgroundTransparency = 1
-    Button.Text = name
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 14
-    Button.TextColor3 = Color3.fromRGB(100, 100, 100)
-    Button.LayoutOrder = order
-    Button.Parent = TabBar
+    -- Hiệu ứng đổ bóng viền mờ cho menu trắng nổi bật hơn
+    local Stroke = Instance.new("UIStroke", MainFrame)
+    Stroke.Color = Color3.fromRGB(200, 200, 200)
+    Stroke.Thickness = 1
 
-    local Page = Instance.new("Frame")
-    Page.Size = UDim2.new(1, -20, 1, -20)
-    Page.Position = UDim2.new(0, 10, 0, 10)
-    Page.BackgroundTransparency = 1
-    Page.Visible = (order == 1)
-    Page.Parent = ContentFrame
+    local dragging=false
+    local dragInput,dragStart,startPos
 
-    if order == 1 then Button.TextColor3 = Color3.fromRGB(0, 0, 0) end
-
-    Button.MouseButton1Click:Connect(function()
-        for _, t in pairs(Tabs) do
-            t.Page.Visible = false
-            t.Btn.TextColor3 = Color3.fromRGB(100, 100, 100)
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseButton1 then
+            dragging=true
+            dragStart=input.Position
+            startPos=MainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState==Enum.UserInputState.End then
+                    dragging=false
+                end
+            end)
         end
-        Page.Visible = true
-        Button.TextColor3 = Color3.fromRGB(0, 0, 0)
     end)
 
-    Tabs[name] = {Page = Page, Btn = Button}
-    return Page
-end
-
-local AimPage = CreateTab("Aim", 1)
-local SettingPage = CreateTab("Settings", 2)
-local ESPPage = CreateTab("ESP", 3)
-
-------------------------------------------------------------------------
--- ĐỊNH DẠNG COMPONENT (TOGGLE SWITCH & TEXTBOX)
-------------------------------------------------------------------------
--- Hàm tạo Nút Bật/Tắt Hình tròn Animation trượt mượt mà
-local function CreateToggle(parent, text, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 40)
-    Row.BackgroundTransparency = 1
-    Row.Parent = parent
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.7, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.Font = Enum.Font.SourceSans
-    Label.TextSize = 16
-    Label.TextColor3 = Color3.fromRGB(50, 50, 50)
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-
-    local Switch = Instance.new("TextButton")
-    Switch.Size = UDim2.new(0, 45, 0, 22)
-    Switch.Position = UDim2.new(1, -45, 0.5, -11)
-    Switch.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
-    Switch.Text = ""
-    Switch.Parent = Row
-    Instance.new("UICorner").CornerRadius = UDim.new(1, 0)
-
-    local Circle = Instance.new("Frame")
-    Circle.Size = UDim2.new(0, 18, 0, 18)
-    Circle.Position = UDim2.new(0, 2, 0, 2)
-    Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Circle.Parent = Switch
-    Instance.new("UICorner").CornerRadius = UDim.new(1, 0)
-
-    local state = false
-    Switch.MouseButton1Click:Connect(function()
-        state = not state
-        local targetX = state and 25 or 2
-        local targetColor = state and Color3.fromRGB(100, 180, 255) or Color3.fromRGB(220, 220, 220)
-        
-        TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, targetX, 0, 2)}):Play()
-        TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
-        
-        callback(state)
+    MainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseMovement then
+            dragInput=input
+        end
     end)
-end
 
--- Khởi tạo các nút bấm dựa trên cấu trúc trên
-CreateToggle(AimPage, "Bật Aimbot", function(v) Config.Aimbot = v end)
-CreateToggle(SettingPage, "Kiểm Tra Đồng Đội (TeamCheck)", function(v) Config.TeamCheck = v end)
-CreateToggle(ESPPage, "Bật ESP 2D", function(v) Config.ESP = v end)
+    RunService.RenderStepped:Connect(function()
+        if dragging and dragInput then
+            local delta=dragInput.Position-dragStart
+            MainFrame.Position=UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset+delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset+delta.Y
+            )
+        end
+    end)
 
--- Ô Nhập Liệu FOV (TextBox) trong tab Settings
-local FovRow = Instance.new("Frame")
-FovRow.Size = UDim2.new(1, 0, 0, 40)
-FovRow.BackgroundTransparency = 1
-FovRow.Parent = SettingPage
+    local draggingBtn=false
+    local dragInputBtn,dragStartBtn,startPosBtn
 
-local FovLabel = Instance.new("TextLabel")
-FovLabel.Size = UDim2.new(0.6, 0, 1, 0)
-FovLabel.BackgroundTransparency = 1
-FovLabel.Text = "Kích Thước Vòng Tròn FOV:"
-FovLabel.Font = Enum.Font.SourceSans
-FovLabel.TextSize = 16
-FovLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
-FovLabel.TextXAlignment = Enum.TextXAlignment.Left
-FovLabel.Parent = FovRow
+    OpenBtn.InputBegan:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseButton1 then
+            draggingBtn=true
+            dragStartBtn=input.Position
+            startPosBtn=OpenBtn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState==Enum.UserInputState.End then
+                    draggingBtn=false
+                end
+            end)
+        end
+    end)
 
-local FovInput = Instance.new("TextBox")
-FovInput.Size = UDim2.new(0, 60, 0, 25)
-FovInput.Position = UDim2.new(1, -60, 0.5, -12)
-FovInput.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
-FovInput.Text = tostring(Config.FOV)
-FovInput.Font = Enum.Font.SourceSansBold
-FovInput.TextSize = 14
-FovInput.TextColor3 = Color3.fromRGB(0, 0, 0)
-FovInput.Parent = FovRow
-Instance.new("UICorner").CornerRadius = UDim.new(0, 4)
+    OpenBtn.InputChanged:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseMovement then
+            dragInputBtn=input
+        end
+    end)
 
-FovInput.FocusLost:Connect(function(enter)
-    local num = tonumber(FovInput.Text)
-    if num then Config.FOV = num else FovInput.Text = tostring(Config.FOV) end
-end)
+    RunService.RenderStepped:Connect(function()
+        if draggingBtn and dragInputBtn then
+            local delta=dragInputBtn.Position-dragStartBtn
+            OpenBtn.Position=UDim2.new(
+                startPosBtn.X.Scale,
+                startPosBtn.X.Offset+delta.X,
+                startPosBtn.Y.Scale,
+                startPosBtn.Y.Offset+delta.Y
+            )
+        end
+    end)
 
-------------------------------------------------------------------------
--- LOGIC KÉO THẢ MENU (DRAGGING PROCESS)
-------------------------------------------------------------------------
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
+    local MinBtn=Instance.new("TextButton",MainFrame)
+    MinBtn.Size=UDim2.new(0,30,0,30)
+    MinBtn.Position=UDim2.new(1,-35,0,5)
+    MinBtn.BackgroundColor3=Color3.fromRGB(220, 220, 220)
+    MinBtn.Text="-"
+    MinBtn.TextColor3=Color3.fromRGB(50, 50, 50)
+    MinBtn.Font=Enum.Font.GothamBold
+    MinBtn.TextSize=20
+    Instance.new("UICorner",MinBtn).CornerRadius=UDim.new(0,5)
+
+    local Title=Instance.new("TextLabel",MainFrame)
+    Title.Size=UDim2.new(1,0,0,40)
+    Title.BackgroundTransparency=1
+    Title.Text="Aimbot Hub" -- Đổi tên Menu thành Aimbot Hub
+    Title.TextColor3=Color3.fromRGB(30, 30, 30)
+    Title.Font=Enum.Font.GothamBold
+    Title.TextSize=20
+
+    local TabBar=Instance.new("Frame",MainFrame)
+    TabBar.Size=UDim2.new(1,0,0,30)
+    TabBar.Position=UDim2.new(0,0,0,40)
+    TabBar.BackgroundTransparency=1
+
+    local MainTab=Instance.new("TextButton",TabBar)
+    MainTab.Size=UDim2.new(1/4,0,1,0)
+    MainTab.Text="Main"
+    MainTab.BackgroundTransparency=1
+    MainTab.TextColor3=Color3.fromRGB(70, 70, 70)
+    MainTab.Font=Enum.Font.GothamBold
+    MainTab.TextSize=16
+
+    local SettingTab=Instance.new("TextButton",TabBar)
+    SettingTab.Size=UDim2.new(1/4,0,1,0)
+    SettingTab.Position=UDim2.new(1/4,0,0,0)
+    SettingTab.Text="Settings"
+    SettingTab.BackgroundTransparency=1
+    SettingTab.TextColor3=Color3.fromRGB(70, 70, 70)
+    SettingTab.Font=Enum.Font.GothamBold
+    SettingTab.TextSize=16
+
+    local DistanceTab=Instance.new("TextButton",TabBar)
+    DistanceTab.Size=UDim2.new(1/4,0,1,0)
+    DistanceTab.Position=UDim2.new(2/4,0,0,0)
+    DistanceTab.Text="AutoFire" -- Đổi tên tab cho hợp lý vì đã bỏ aimRange
+    DistanceTab.BackgroundTransparency=1
+    DistanceTab.TextColor3=Color3.fromRGB(70, 70, 70)
+    DistanceTab.Font=Enum.Font.GothamBold
+    DistanceTab.TextSize=16
+
+    local TeamTab=Instance.new("TextButton",TabBar)
+    TeamTab.Size=UDim2.new(1/4,0,1,0)
+    TeamTab.Position=UDim2.new(3/4,0,0,0)
+    TeamTab.Text="Team"
+    TeamTab.BackgroundTransparency=1
+    TeamTab.TextColor3=Color3.fromRGB(70, 70, 70)
+    TeamTab.Font=Enum.Font.GothamBold
+    TeamTab.TextSize=16
+
+    local MainPage=Instance.new("Frame",MainFrame)
+    MainPage.Size=UDim2.new(1,0,1,-100)
+    MainPage.Position=UDim2.new(0,0,0,70)
+    MainPage.BackgroundTransparency=1
+
+    local SettingPage=Instance.new("Frame",MainFrame)
+    SettingPage.Size=MainPage.Size
+    SettingPage.Position=MainPage.Position
+    SettingPage.BackgroundTransparency=1
+    SettingPage.Visible=false
+
+    local DistancePage=Instance.new("Frame",MainFrame)
+    DistancePage.Size=MainPage.Size
+    DistancePage.Position=MainPage.Position
+    DistancePage.BackgroundTransparency=1
+    DistancePage.Visible=false
+
+    local TeamPage=Instance.new("Frame",MainFrame)
+    TeamPage.Size=MainPage.Size
+    TeamPage.Position=MainPage.Position
+    TeamPage.BackgroundTransparency=1
+    TeamPage.Visible=false
+
+    local function makeButton(parent,text,pos)
+        local btn=Instance.new("TextButton",parent)
+        btn.Size=UDim2.new(0.8,0,0,30)
+        btn.Position=pos
+        btn.BackgroundColor3=Color3.fromRGB(255, 255, 255) -- Nền nút trắng
+        btn.Text=text
+        btn.TextColor3=Color3.fromRGB(50, 50, 50) -- Chữ tối màu
+        btn.Font=Enum.Font.GothamBold
+        btn.TextSize=16
+        Instance.new("UICorner",btn).CornerRadius=UDim.new(0,8)
+        local bStroke = Instance.new("UIStroke", btn)
+        bStroke.Color = Color3.fromRGB(210, 210, 210)
+        return btn
     end
-end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    local AimbotToggle=makeButton(MainPage,"Aimbot: OFF",UDim2.new(0.1,0,0,10))
+    local CheckWallToggle=makeButton(MainPage,"Check Wall: ON",UDim2.new(0.1,0,0,50))
+    local AimNPCToggle=makeButton(MainPage,"Aim NPC: OFF",UDim2.new(0.1,0,0,90))
+
+    local TargetBtn=makeButton(SettingPage,"Select Target",UDim2.new(0.1,0,0,10))
+    local ESPToggle=makeButton(SettingPage,"ESP Line: OFF",UDim2.new(0.1,0,0,50))
+
+    local FOVLabel=Instance.new("TextLabel",SettingPage)
+    FOVLabel.Size=UDim2.new(0.8,0,0,30)
+    FOVLabel.Position=UDim2.new(0.1,0,0,90)
+    FOVLabel.BackgroundTransparency=1
+    FOVLabel.Text="Aimbot FOV:"
+    FOVLabel.TextColor3=Color3.fromRGB(50, 50, 50)
+    FOVLabel.Font=Enum.Font.GothamBold
+    FOVLabel.TextSize=16
+
+    local FOVBox=Instance.new("TextBox",SettingPage)
+    FOVBox.Size=UDim2.new(0.8,0,0,30)
+    FOVBox.Position=UDim2.new(0.1,0,0,130)
+    FOVBox.BackgroundColor3=Color3.fromRGB(255, 255, 255)
+    FOVBox.Text="100"
+    FOVBox.TextColor3=Color3.fromRGB(50, 50, 50)
+    FOVBox.Font=Enum.Font.GothamBold
+    FOVBox.TextSize=16
+    Instance.new("UICorner",FOVBox)
+    Instance.new("UIStroke", FOVBox).Color = Color3.fromRGB(210, 210, 210)
+
+    local ESPDistLabel=Instance.new("TextLabel",SettingPage)
+    ESPDistLabel.Size=UDim2.new(0.8,0,0,30)
+    ESPDistLabel.Position=UDim2.new(0.1,0,0,170)
+    ESPDistLabel.BackgroundTransparency=1
+    ESPDistLabel.Text="Enemy ESP Distance:"
+    ESPDistLabel.TextColor3=Color3.fromRGB(50, 50, 50)
+    ESPDistLabel.Font=Enum.Font.GothamBold
+    ESPDistLabel.TextSize=16
+
+    local ESPDistBox=Instance.new("TextBox",SettingPage)
+    ESPDistBox.Size=UDim2.new(0.8,0,0,30)
+    ESPDistBox.Position=UDim2.new(0.1,0,0,210)
+    ESPDistBox.BackgroundColor3=Color3.fromRGB(255, 255, 255)
+    ESPDistBox.Text="100"
+    ESPDistBox.TextColor3=Color3.fromRGB(50, 50, 50)
+    ESPDistBox.Font=Enum.Font.GothamBold
+    ESPDistBox.TextSize=16
+    Instance.new("UICorner",ESPDistBox)
+    Instance.new("UIStroke", ESPDistBox).Color = Color3.fromRGB(210, 210, 210)
+
+    -- Auto Fire Tab (Đã loại bỏ phần thiết lập khoảng cách)
+    local AutoFireBtn=makeButton(DistancePage,"Auto Fire: OFF",UDim2.new(0.1,0,0,40))
+
+    local TeamLabel = Instance.new("TextLabel", TeamPage)
+    TeamLabel.Size = UDim2.new(0.8,0,0,24)
+    TeamLabel.Position = UDim2.new(0.1,0,0,8)
+    TeamLabel.BackgroundTransparency = 1
+    TeamLabel.Text = "Team Checks (each button is one type):"
+    TeamLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
+    TeamLabel.Font = Enum.Font.GothamBold
+    TeamLabel.TextSize = 14
+
+    local TeamScroll = Instance.new("ScrollingFrame", TeamPage)
+    TeamScroll.Size = UDim2.new(0.8,0,0,260)
+    TeamScroll.Position = UDim2.new(0.1,0,0,40)
+    TeamScroll.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TeamScroll.BackgroundTransparency = 0.5
+    TeamScroll.CanvasSize = UDim2.new(0,0,0,0)
+    TeamScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
+    TeamScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Instance.new("UICorner", TeamScroll).CornerRadius = UDim.new(0,8)
+    Instance.new("UIStroke", TeamScroll).Color = Color3.fromRGB(210, 210, 210)
+
+    local teamListLayout = Instance.new("UIListLayout", TeamScroll)
+    teamListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    teamListLayout.Padding = UDim.new(0,6)
+
+    local function updateTeamCanvas()
+        TeamScroll.CanvasSize = UDim2.new(0,0,0,teamListLayout.AbsoluteContentSize.Y + 12)
     end
-end)
+    teamListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateTeamCanvas)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-end)
+    local function makeTeamCheckButton(text, initialState, onToggle)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 30)
+        btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextColor3 = Color3.fromRGB(50, 50, 50)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 14
+        btn.Text = text .. ": " .. (initialState and "ON" or "OFF")
+        btn.LayoutOrder = #TeamScroll:GetChildren()
+        btn.Parent = TeamScroll
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+        Instance.new("UIStroke", btn).Color = Color3.fromRGB(210, 210, 210)
 
-------------------------------------------------------------------------
--- HỆ THỐNG VẼ FOV & ESP (DRAWING API - ANTI-LAG)
-------------------------------------------------------------------------
--- Vòng tròn FOV Aura
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-FOVCircle.Filled = false
+        btn.MouseButton1Click:Connect(function()
+            local newState = not initialState
+            initialState = newState
+            btn.Text = text .. ": " .. (initialState and "ON" or "OFF")
+            if onToggle then
+                onToggle(initialState)
+            end
+        end)
 
--- Hàm tạo cấu trúc đồ họa ESP cho Player mới
-local function CreateESP(player)
-    if ESP_Cache[player] then return end
-    
-    local Box = Drawing.new("Square")
-    Box.Thickness = 1
-    Box.Filled = false
-    Box.Color = Color3.fromRGB(255, 255, 255)
-    
-    local Line = Drawing.new("Line")
-    Line.Thickness = 1
-    Line.Color = Color3.fromRGB(255, 255, 255)
-
-    ESP_Cache[player] = {Box = Box, Line = Line}
-end
-
-local function RemoveESP(player)
-    if ESP_Cache[player] then
-        ESP_Cache[player].Box:Remove()
-        ESP_Cache[player].Line:Remove()
-        ESP_Cache[player].Nil = nil
+        updateTeamCanvas()
+        return btn
     end
-end
 
-Players.PlayerAdded:Connect(CreateESP)
-Players.PlayerRemoving:Connect(RemoveESP)
-for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreateESP(p) end end
+    makeTeamCheckButton("Check Team (by Team property)", teamCheck, function(state) teamCheck = state end)
+    makeTeamCheckButton("Check Friends", friendCheck, function(state) friendCheck = state end)
+    makeTeamCheckButton("Check TeamNum (by attribute)", teamNumCheck, function(state) teamNumCheck = state end)
 
-------------------------------------------------------------------------
--- VÒNG LẶP CHÍNH CẬP NHẬT TỌA ĐỘ (RENDERSTEPPED HƠN HEARTBEAT)
-------------------------------------------------------------------------
--- Tìm mục tiêu gần nhất thoả mãn điều kiện
-local function GetClosestTarget()
-    local target = nil
-    local maxDist = Config.FOV
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local TargetFrame=Instance.new("Frame",ScreenGui)
+    TargetFrame.Size=UDim2.new(0,220,0,260)
+    TargetFrame.Position=UDim2.new(0.5,170,0.5,-130)
+    TargetFrame.BackgroundColor3=Color3.fromRGB(245, 245, 245)
+    TargetFrame.Visible=false
+    Instance.new("UICorner",TargetFrame)
+    Instance.new("UIStroke", TargetFrame).Color = Color3.fromRGB(200, 200, 200)
 
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if Config.TeamCheck and player.Team == LocalPlayer.Team then continue end
-            
-            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                if dist < maxDist then
-                    maxDist = dist
-                    target = player.Character.HumanoidRootPart
+    local ResetBtn=Instance.new("TextButton",TargetFrame)
+    ResetBtn.Size=UDim2.new(1,0,0,30)
+    ResetBtn.Text="Reset Target"
+    ResetBtn.BackgroundColor3=Color3.fromRGB(255, 255, 255)
+    ResetBtn.TextColor3=Color3.fromRGB(50, 50, 50)
+    Instance.new("UIStroke", ResetBtn).Color = Color3.fromRGB(210, 210, 210)
+
+    local aimOn,wallCheck=false,false
+
+    -- Vòng tròn FOV đổi sang màu trắng
+    local FOVCircle=Drawing.new("Circle")
+    FOVCircle.Visible=false
+    FOVCircle.Color=Color3.fromRGB(255, 255, 255)
+    FOVCircle.Thickness=2
+    FOVCircle.NumSides=100
+    FOVCircle.Filled=false
+
+    MinBtn.MouseButton1Click:Connect(function()
+        MainFrame.Visible=false
+        OpenBtn.Visible=true
+    end)
+
+    OpenBtn.MouseButton1Click:Connect(function()
+        MainFrame.Visible=true
+        OpenBtn.Visible=false
+    end)
+
+    MainTab.MouseButton1Click:Connect(function()
+        MainPage.Visible=true
+        SettingPage.Visible=false
+        DistancePage.Visible=false
+        TeamPage.Visible=false
+    end)
+
+    SettingTab.MouseButton1Click:Connect(function()
+        MainPage.Visible=false
+        SettingPage.Visible=true
+        DistancePage.Visible=false
+        TeamPage.Visible=false
+    end)
+
+    DistanceTab.MouseButton1Click:Connect(function()
+        MainPage.Visible=false
+        SettingPage.Visible=false
+        DistancePage.Visible=true
+        TeamPage.Visible=false
+    end)
+
+    TeamTab.MouseButton1Click:Connect(function()
+        MainPage.Visible=false
+        SettingPage.Visible=false
+        DistancePage.Visible=false
+        TeamPage.Visible=true
+    end)
+
+    AimbotToggle.MouseButton1Click:Connect(function()
+        aimOn=not aimOn
+        AimbotToggle.Text="Aimbot: "..(aimOn and "ON" or "OFF")
+        FOVCircle.Visible=aimOn
+        if not aimOn then
+            autoShot = false
+            AutoFireBtn.Text = "Auto Fire: OFF"
+        end
+    end)
+
+    CheckWallToggle.MouseButton1Click:Connect(function()
+        wallCheck=not wallCheck
+        CheckWallToggle.Text="Check Wall: "..(wallCheck and "ON" or "OFF")
+    end)
+
+    AimNPCToggle.MouseButton1Click:Connect(function()
+        aimNPC=not aimNPC
+        AimNPCToggle.Text="Aim NPC: "..(aimNPC and "ON" or "OFF")
+    end)
+
+    AutoFireBtn.MouseButton1Click:Connect(function()
+        autoShot = not autoShot
+        AutoFireBtn.Text = "Auto Fire: "..(autoShot and "ON" or "OFF")
+    end)
+
+    ESPToggle.MouseButton1Click:Connect(function()
+        espOn=not espOn
+        ESPToggle.Text="ESP Line: "..(espOn and "ON" or "OFF")
+        if not espOn then
+            for _,v in pairs(espLines) do
+                v:Remove()
+            end
+            espLines={}
+        end
+    end)
+
+    TargetBtn.MouseButton1Click:Connect(function()
+        TargetFrame.Visible=not TargetFrame.Visible
+    end)
+
+    ResetBtn.MouseButton1Click:Connect(function()
+        priorityTarget=nil
+    end)
+
+    local function updatePlayerList()
+        for _,v in pairs(TargetFrame:GetChildren()) do
+            if v:IsA("TextButton") and v~=ResetBtn then
+                v:Destroy()
+            end
+        end
+
+        local y=35
+        for _,plr in pairs(Players:GetPlayers()) do
+            if plr~=player then
+                local btn=Instance.new("TextButton",TargetFrame)
+                btn.Size=UDim2.new(1,0,0,25)
+                btn.Position=UDim2.new(0,0,0,y)
+                y=y+25
+                btn.Text=plr.Name
+                btn.BackgroundColor3=Color3.fromRGB(255, 255, 255)
+                btn.TextColor3=Color3.fromRGB(50, 50, 50)
+                Instance.new("UIStroke", btn).Color = Color3.fromRGB(210, 210, 210)
+
+                btn.MouseButton1Click:Connect(function()
+                    priorityTarget=plr
+                end)
+            end
+        end
+    end
+
+    Players.PlayerAdded:Connect(updatePlayerList)
+
+    Players.PlayerRemoving:Connect(function(plr)
+        if espLines[plr] then
+            espLines[plr]:Remove()
+            espLines[plr]=nil
+        end
+        updatePlayerList()
+    end)
+
+    updatePlayerList()
+
+    local function canSee(targetPart)
+        if not wallCheck then return true end
+        local rayParams=RaycastParams.new()
+        rayParams.FilterDescendantsInstances={player.Character}
+        rayParams.FilterType=Enum.RaycastFilterType.Blacklist
+
+        local ray=Workspace:Raycast(
+            Camera.CFrame.Position,
+            targetPart.Position-Camera.CFrame.Position,
+            rayParams
+        )
+
+        if ray and ray.Instance and not ray.Instance:IsDescendantOf(targetPart.Parent) then
+            return false
+        end
+        return true
+    end
+
+    local function getClosestTarget()
+        local center=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+        local fov=tonumber(FOVBox.Text) or 100
+
+        if priorityTarget and priorityTarget.Character then
+            local tPart = getTargetPart(priorityTarget.Character)
+            local hum=priorityTarget.Character:FindFirstChildOfClass("Humanoid")
+            if tPart and hum and hum.Health>0 then
+                local pos,onScreen=Camera:WorldToViewportPoint(tPart.Position)
+                if onScreen then
+                    local dist2d=(Vector2.new(pos.X,pos.Y)-center).Magnitude
+                    if dist2d<=fov and canSee(tPart) then
+                        return priorityTarget
+                    end
                 end
             end
         end
+
+        local closest=nil
+        local shortest=math.huge
+
+        for _,plr in pairs(Players:GetPlayers()) do
+            if plr~=player and plr.Character then
+                local tPart = getTargetPart(plr.Character)
+                local humanoid=plr.Character:FindFirstChildOfClass("Humanoid")
+
+                if tPart and humanoid and humanoid.Health>0 then
+                    if (not friendCheck or not player:IsFriendsWith(plr.UserId)) and
+                       (not teamCheck or plr.Team~=player.Team) then
+
+                        if teamNumCheck then
+                            local a = plr:GetAttribute("TeamNum")
+                            local b = player:GetAttribute("TeamNum")
+                            if a and b and a == b then
+                                continue
+                            end
+                        end
+
+                        local screenPos,onScreen=Camera:WorldToViewportPoint(tPart.Position)
+
+                        if onScreen then
+                            local dist2d=(Vector2.new(screenPos.X,screenPos.Y)-center).Magnitude
+
+                            if dist2d<=fov and dist2d<shortest and canSee(tPart) then
+                                shortest=dist2d
+                                closest=plr
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        if closest then
+            return closest
+        end
+
+        if aimNPC then
+            local closestNPC=nil
+            local shortestNPC=math.huge
+
+            for _,npc in pairs(Workspace:GetDescendants()) do
+                if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
+                    local tPart = getTargetPart(npc)
+                    if tPart and Players:GetPlayerFromCharacter(npc)==nil then
+                        local hum=npc.Humanoid
+                        if hum.Health>0 then
+                            if teamNumCheck then
+                                local npcNum = npc:GetAttribute("TeamNum")
+                                local playerNum = player:GetAttribute("TeamNum")
+                                if npcNum and playerNum and npcNum == playerNum then
+                                    continue
+                                end
+                            end
+
+                            local screenPos,onScreen=Camera:WorldToViewportPoint(tPart.Position)
+
+                            if onScreen then
+                                local dist=(Vector2.new(screenPos.X,screenPos.Y)-center).Magnitude
+
+                                if dist<=fov and dist<shortestNPC and canSee(tPart) then
+                                    shortestNPC=dist
+                                    closestNPC=npc
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            return closestNPC
+        end
+
+        return nil
     end
-    return target
+
+    RunService.RenderStepped:Connect(function()
+        FOVCircle.Position=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+        FOVCircle.Radius=tonumber(FOVBox.Text) or 100
+
+        if espOn then
+            espDistance=tonumber(ESPDistBox.Text) or 100
+
+            for _,plr in pairs(Players:GetPlayers()) do
+                if plr~=player and plr.Character then
+                    local tPart = getTargetPart(plr.Character)
+                    local humanoid=plr.Character:FindFirstChildOfClass("Humanoid")
+
+                    if tPart and humanoid and humanoid.Health>0 then
+                        if not espLines[plr] then
+                            espLines[plr]=Drawing.new("Line")
+                            espLines[plr].Thickness=2
+                        end
+
+                        local screenPos,onScreen=Camera:WorldToViewportPoint(tPart.Position)
+                        local line=espLines[plr]
+
+                        if player.Character and getTargetPart(player.Character) then
+                            local myPart = getTargetPart(player.Character)
+                            local dist=(myPart.Position-tPart.Position).Magnitude
+
+                            if onScreen and dist<=espDistance then
+                                line.Visible=true
+                                line.From=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
+                                line.To=Vector2.new(screenPos.X,screenPos.Y)
+
+                                if player:IsFriendsWith(plr.UserId) then
+                                    line.Color=Color3.fromRGB(0,255,0) -- Bạn bè giữ màu xanh lá
+                                else
+                                    line.Color=Color3.fromRGB(255, 255, 255) -- Đổi ESP Line kẻ địch sang màu trắng
+                                end
+                            else
+                                line.Visible=false
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        if aimOn then
+            local target=getClosestTarget()
+
+            if target then
+                local targetBodyPart=nil
+
+                if target:IsA("Player") then
+                    if target.Character then
+                        targetBodyPart=getTargetPart(target.Character)
+                    end
+                else
+                    targetBodyPart=getTargetPart(target)
+                end
+
+                if targetBodyPart then
+                    -- Ngắm thẳng vào Thân thay vì Đầu
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetBodyPart.Position)
+
+                    if autoShot then
+                        if tick() - lastAutoShot >= autoShotInterval then
+                            lastAutoShot = tick()
+                            pcall(function()
+                                if player.Character then
+                                    local tool = player.Character:FindFirstChildOfClass("Tool")
+                                    if tool and tool.Parent then
+                                        tool:Activate()
+                                    end
+                                end
+                             pcall_end)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    UIS.InputBegan:Connect(function(input,gp)
+        if gp then return end
+        if input.KeyCode==Enum.KeyCode.M then
+            MainFrame.Visible=not MainFrame.Visible
+        end
+    end)
 end
 
-RunService.RenderStepped:Connect(function()
-    local mousePos = UserInputService:GetMouseLocation()
-    
-    -- Cập nhật FOV tròn phát sáng Aura
-    if Config.Aimbot then
-        FOVCircle.Position = mousePos
-        FOVCircle.Radius = Config.FOV
-        FOVCircle.Visible = true
-        
-        -- Thực thi Khóa tâm lập tức (Instant Lock)
-        local target = GetClosestTarget()
-        if target then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
-        end
-    else
-        FOVCircle.Visible = false
-    end
+createGUI()
 
-    -- Cập nhật Vẽ ESP (Box + Tracer Line)
-    for player, draw in pairs(ESP_Cache) do
-        if Config.ESP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local rootPart = player.Character.HumanoidRootPart
-            local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
-            
-            if onScreen then
-                -- Tính toán kích thước Khung 2D tương thích theo khoảng cách xa gần
-                local head = player.Character:FindFirstChild("Head")
-                local headPos = head and Camera:WorldToViewportPoint(head.Position) or pos
-                local width = (pos.Y - headPos.Y) * 2
-                local height = width * 1.5
-                
-                draw.Box.Size = Vector2.new(width, height)
-                draw.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
-                draw.Box.Visible = true
-
-                -- Vẽ đường kẻ Tracer phát ra từ đáy màn hình của bạn
-                draw.Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                draw.Line.To = Vector2.new(pos.X, pos.Y)
-                draw.Line.Visible = true
-            else
-                draw.Box.Visible = false
-                draw.Line.Visible = false
-            end
-        else
-            draw.Box.Visible = false
-            draw.Line.Visible = false
-        end
-    end
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    createGUI()
 end)
