@@ -32,7 +32,73 @@ local rs = game:GetService("RunService")
 local players = game:GetService("Players")
 local tweenService = game:GetService("TweenService")
 local httpService = game:GetService("HttpService")
+-- ==========================================
+-- HỆ THỐNG ANTI-KICK & ANTI-AFK
+-- ==========================================
+local StarterGui = game:GetService("StarterGui")
+local mt = getrawmetatable(game)
+local plr = game:GetService("Players").LocalPlayer
 
+local function showKickBlocked()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Bảo vệ hệ thống",
+            Text = "Đã chặn 1 nỗ lực Kick/Ban!",
+            Duration = 3,
+            Icon = "",
+        })
+    end)
+end
+
+if not getgenv().AntiKickLoaded then
+    getgenv().AntiKickLoaded = true
+    
+    setreadonly(mt, false)
+    local old_namecall = mt.__namecall
+    
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        
+        -- Chặn gọi hàm Kick trực tiếp lên nhân vật
+        if self == plr and (method == "Kick" or method:lower():find("kick") or method:lower():find("ban") or method:lower():find("detected")) then
+            showKickBlocked()
+            return
+        end
+        
+        -- Chặn việc gửi thông tin phát hiện hack lên Server
+        if method == "FireServer" and (tostring(self):find("Kick") or tostring(self):find("Ban") or tostring(self):find("exploit") or tostring(self):find("detected")) then
+            showKickBlocked()
+            return
+        end
+        
+        -- Chặn Disconnect
+        if method == "Disconnect" and self == plr then
+            showKickBlocked()
+            return
+        end
+        
+        return old_namecall(self, ...)
+    end)
+    
+    -- Hook trực tiếp hàm Kick nếu Executor hỗ trợ
+    if hookfunction then
+        hookfunction(plr.Kick, function() showKickBlocked() end)
+    end
+    
+    -- Anti AFK (Chống văng game khi treo máy 20 phút)
+    task.spawn(function()
+        while task.wait(0.15) do
+            pcall(function()
+                for _, c in ipairs(getconnections(plr.Idled)) do
+                    c:Disable()
+                end
+            end)
+        end
+    end)
+    
+    setreadonly(mt, true)
+end
+-- ==========================================
 -- Danh sách Admin mặc định (Thêm Username vào đây)
 local AdminList = {
     ["vu2k12hub"] = true,
