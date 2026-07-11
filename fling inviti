@@ -8,12 +8,27 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
--- Định tuyến trực tiếp đến RemoteEvent nội bộ của game
+-- Định tuyến hệ thống sự kiện nội bộ của game
 local CharacterEvents = ReplicatedStorage:WaitForChild("CharacterEvents", 5)
 local StruggleEvent = CharacterEvents and CharacterEvents:WaitForChild("Struggle", 5)
+local GrabEvent = ReplicatedStorage:FindFirstChild("GrabObject", true) or ReplicatedStorage:FindFirstChild("Grab", true)
+
+-- THAM SỐ CẤU HÌNH BIẾN TOÀN CỤC
+local TARGET_PLAYER_NAME = "Tên_Của_Bạn" -- Điền chính xác tên người chơi cần kiểm thử
+local FLING_FORCE = 9999999
+local MAX_GRAB_DISTANCE = 50
+
+-- Khởi tạo ghế tàng hình dùng cho Nút 3
+local invisibleSeat = Instance.new("Seat")
+invisibleSeat.Size = Vector3.new(2, 0.5, 2)
+invisibleSeat.Transparency = 1
+invisibleSeat.CanCollide = false
+invisibleSeat.Anchored = false
+
+local currentNetworkPart = nil
 
 -- ==========================================
--- 1. TẠO GIAO DIỆN ĐIỀU KHIỂN (GUI)
+-- 1. KHỞI TẠO GIAO DIỆN ĐIỀU KHIỂN (GUI)
 -- ==========================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SystemControlPanel"
@@ -21,7 +36,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 255)
+mainFrame.Size = UDim2.new(0, 220, 0, 255) -- Chiều cao tối ưu cho 3 nút và 1 ô nhập liệu
 mainFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 mainFrame.BorderSizePixel = 0
@@ -57,6 +72,7 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 6)
 closeCorner.Parent = closeButton
 
+-- NÚT 1: FLING CONTROLLER
 local toggleFlingBtn = Instance.new("TextButton")
 toggleFlingBtn.Size = UDim2.new(1, -20, 0, 35)
 toggleFlingBtn.Position = UDim2.new(0, 10, 0, 40)
@@ -71,6 +87,7 @@ local flingCorner = Instance.new("UICorner")
 flingCorner.CornerRadius = UDim.new(0, 6)
 flingCorner.Parent = toggleFlingBtn
 
+-- Ô NHẬP TỐC ĐỘ CHO NÚT 1
 local speedInput = Instance.new("TextBox")
 speedInput.Size = UDim2.new(1, -20, 0, 35)
 speedInput.Position = UDim2.new(0, 10, 0, 80)
@@ -87,6 +104,7 @@ local inputCorner = Instance.new("UICorner")
 inputCorner.CornerRadius = UDim.new(0, 6)
 inputCorner.Parent = speedInput
 
+-- NÚT 2: ANTI-GRAB / ROLL
 local toggleAntiGrabBtn = Instance.new("TextButton")
 toggleAntiGrabBtn.Size = UDim2.new(1, -20, 0, 35)
 toggleAntiGrabBtn.Position = UDim2.new(0, 10, 0, 120)
@@ -101,12 +119,12 @@ local antiGrabCorner = Instance.new("UICorner")
 antiGrabCorner.CornerRadius = UDim.new(0, 6)
 antiGrabCorner.Parent = toggleAntiGrabBtn
 
--- TẠO NÚT THỨ 3: AURA SEAT VOID
+-- NÚT 3: AURA SEAT FLING SYSTEM
 local toggleAuraSeatBtn = Instance.new("TextButton")
 toggleAuraSeatBtn.Size = UDim2.new(1, -20, 0, 35)
 toggleAuraSeatBtn.Position = UDim2.new(0, 10, 0, 160)
 toggleAuraSeatBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-toggleAuraSeatBtn.Text = "Aura Seat: OFF"
+toggleAuraSeatBtn.Text = "Aura Seat Fling: OFF"
 toggleAuraSeatBtn.Font = Enum.Font.SourceSansBold
 toggleAuraSeatBtn.TextSize = 16
 toggleAuraSeatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -145,7 +163,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ==========================================
--- 2. XỬ LÝ LOGIC FLING
+-- 2. LOGIC NÚT 1: CƠ CHẾ FLING TRUYỀN THỐNG
 -- ==========================================
 local isFlingEnabled = true
 local flingSpeed = 850
@@ -181,6 +199,7 @@ local childAddedConn = Workspace.ChildAdded:Connect(function(child)
 		if not weldConstraint or not weldConstraint.Part1 then return end
 		local targetPart = weldConstraint.Part1
 		
+		-- Gắn lực cho cơ chế Fling cơ bản
 		local bodyVelocity = Instance.new("BodyVelocity")
 		bodyVelocity.Parent = targetPart
 		
@@ -195,11 +214,16 @@ local childAddedConn = Workspace.ChildAdded:Connect(function(child)
 				Debris:AddItem(bodyVelocity, 100)
 			end
 		end)
+		
+		-- Đồng bộ liên kết nếu đang bật cơ chế Aura Seat ở Nút 3
+		currentNetworkPart = targetPart
+		invisibleSeat.Parent = currentNetworkPart
+		invisibleSeat.CFrame = currentNetworkPart.CFrame
 	end
 end)
 
 -- ==========================================
--- 3. CƠ CHẾ ANTI-GRAB & ANTI-ROLL (NATIVE)
+-- 3. LOGIC NÚT 2: CƠ CHẾ ANTI-GRAB & ANTI-ROLL
 -- ==========================================
 local isAntiGrabEnabled = false
 local antiGrabLoop = nil
@@ -233,9 +257,7 @@ local function executeNativeAntiGrab()
 			local p0 = obj.Part0
 			local p1 = obj.Part1
 			if (p0 and p0.Name == "GrabPart") or (p1 and p1.Name == "GrabPart") then
-				if StruggleEvent then
-					StruggleEvent:FireServer(localPlayer)
-				end
+				if StruggleEvent then StruggleEvent:FireServer(localPlayer) end
 			end
 		end
 	end
@@ -262,79 +284,67 @@ toggleAntiGrabBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 4. CƠ CHẾ AURA SEAT VOID (NÚT 3)
+-- 4. LOGIC NÚT 3: CƠ CHẾ AURA SEAT FLING CHUYÊN SÂU
 -- ==========================================
 local isAuraSeatEnabled = false
 local auraSeatLoop = nil
-local auraRadius = 25 -- Bán kính quét Player xung quanh
-local activeSeats = {} -- Lưu trữ danh sách ghế đã tạo ra để quản lý
 
--- Hàm tìm kiếm một Part hợp lệ có sẵn trong map để chuyển đổi
-local function findAvailablePart()
-	for _, obj in ipairs(Workspace:GetDescendants()) do
-		if obj:IsA("Part") and obj.CanCollide and not obj.Anchored and obj.Size.Magnitude > 1 then
-			if not obj:FindFirstAncestorOfClass("Model") or not Players:GetPlayerFromCharacter(obj:FindFirstAncestorOfClass("Model")) then
-				-- Đảm bảo Part không thuộc về bất kỳ người chơi nào và chưa bị biến thành ghế
-				if not obj:IsA("Seat") and not activeSeats[obj] then
-					return obj
-				end
-			end
-		end
-	end
-	return nil
-end
-
-local function executeAuraSeat()
+local function AutoGrabNearestPart()
 	local myChar = localPlayer.Character
 	if not myChar then return end
 	local myHrp = myChar:FindFirstChild("HumanoidRootPart")
 	if not myHrp then return end
 
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= localPlayer and p.Character then
-			local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
-			local enemyHumanoid = p.Character:FindFirstChildOfClass("Humanoid")
-			
-			if enemyHrp and enemyHumanoid and enemyHumanoid.Health > 0 then
-				-- Kiểm tra xem Player này đã ngồi (Seat) hoặc đã bị kéo đi chưa
-				if enemyHumanoid.Sit == false then
-					local distance = (myHrp.Position - enemyHrp.Position).Magnitude
-					if distance <= auraRadius then
-						
-						-- Lấy 1 Part ngẫu nhiên có sẵn trong Workspace
-						local targetPart = findAvailablePart()
-						if targetPart then
-							-- Biến đổi thuộc tính thành ghế tàng hình
-							activeSeats[targetPart] = true
-							targetPart.Transparency = 1
-							targetPart.CanCollide = true
-							
-							-- Ép kiểu/Tạo thực thể Seat đè lên tọa độ Part nếu cần, hoặc di chuyển trực tiếp Part có sẵn
-							local seat = Instance.new("Seat")
-							seat.Size = Vector3.new(2, 1, 2)
-							seat.Transparency = 1
-							seat.CFrame = enemyHrp.CFrame * CFrame.new(0, -0.5, 0)
-							seat.Parent = Workspace
-							
-							-- Lắng nghe sự kiện khi có mục tiêu ngồi vào ghế
-							seat:GetPropertyChangedSignal("Occupant"):Connect(function()
-								if seat.Occupant == enemyHumanoid then
-									task.wait(0.05) -- Đợi đồng bộ hóa vật lý nhân vật
-									seat.Anchored = true
-									-- Dịch chuyển ghế thẳng xuống dưới -1000 trục Y mang theo Player
-									seat.CFrame = CFrame.new(seat.Position.X, -1000, seat.Position.Z)
-									
-									-- Dọn dẹp đối tượng sau khi thực thi thành công
-									task.wait(1)
-									seat:Destroy()
-								end
-							end)
-							
-							-- Cơ chế dọn dẹp dự phòng nếu không ai ngồi sau 3 giây
-							Debris:AddItem(seat, 3)
-						end
-					end
+	local nearestPart = nil
+	local shortestDistance = MAX_GRAB_DISTANCE
+
+	for _, obj in ipairs(Workspace:GetChildren()) do
+		if obj:IsA("Part") and obj.Anchored == false and obj.CanCollide == true then
+			if not obj:FindFirstAncestorOfClass("Model") or not Players:GetPlayerFromCharacter(obj:FindFirstAncestorOfClass("Model")) then
+				local distance = (obj.Position - myHrp.Position).Magnitude
+				if distance < shortestDistance then
+					shortestDistance = distance
+					nearestPart = obj
 				end
+			end
+		end
+	end
+
+	if GrabEvent and nearestPart then
+		GrabEvent:FireServer(nearestPart)
+	end
+end
+
+local function executeAuraSeatFling()
+	-- Tự động gọi AutoGrab nếu mất liên kết vật lý mẹ
+	if not currentNetworkPart or not currentNetworkPart:IsDescendantOf(Workspace) then
+		invisibleSeat.Parent = nil
+		currentNetworkPart = nil
+		AutoGrabNearestPart()
+		return
+	end
+
+	local targetPlayer = Players:FindFirstChild(TARGET_PLAYER_NAME)
+	if targetPlayer and targetPlayer.Character then
+		local enemyHrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+		local enemyHumanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+		
+		if enemyHrp and enemyHumanoid and enemyHumanoid.Health > 0 then
+			-- Ép tọa độ micro-giây lồng vào người mục tiêu
+			invisibleSeat.CFrame = enemyHrp.CFrame
+			
+			-- Chỉ kích hoạt bơm Vector lực khi mục tiêu dính trạng thái NGỒI (Sit)
+			if enemyHumanoid.Sit == true or invisibleSeat.Occupant == enemyHumanoid then
+				invisibleSeat.AssemblyLinearVelocity = Vector3.new(FLING_FORCE, FLING_FORCE, FLING_FORCE)
+				invisibleSeat.AssemblyAngularVelocity = Vector3.new(FLING_FORCE, FLING_FORCE, FLING_FORCE)
+				
+				if currentNetworkPart then
+					currentNetworkPart.AssemblyLinearVelocity = Vector3.new(FLING_FORCE, FLING_FORCE, FLING_FORCE)
+					currentNetworkPart.AssemblyAngularVelocity = Vector3.new(FLING_FORCE, FLING_FORCE, FLING_FORCE)
+				end
+				
+				enemyHrp.AssemblyLinearVelocity = Vector3.new(FLING_FORCE, FLING_FORCE, FLING_FORCE)
+				enemyHrp.AssemblyAngularVelocity = Vector3.new(FLING_FORCE, FLING_FORCE, FLING_FORCE)
 			end
 		end
 	end
@@ -345,16 +355,17 @@ local function toggleAuraSeat(state)
 	if auraSeatLoop then auraSeatLoop:Disconnect() auraSeatLoop = nil end
 	
 	if isAuraSeatEnabled then
-		toggleAuraSeatBtn.Text = "Aura Seat: ON"
+		toggleAuraSeatBtn.Text = "Aura Seat Fling: ON"
 		toggleAuraSeatBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
 		
-		auraSeatLoop = RunService.RenderStepped:Connect(function()
-			executeAuraSeat()
+		auraSeatLoop = RunService.Heartbeat:Connect(function()
+			executeAuraSeatFling()
 		end)
 	else
-		toggleAuraSeatBtn.Text = "Aura Seat: OFF"
+		toggleAuraSeatBtn.Text = "Aura Seat Fling: OFF"
 		toggleAuraSeatBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-		table.clear(activeSeats)
+		invisibleSeat.Parent = nil
+		currentNetworkPart = nil
 	end
 end
 
@@ -362,11 +373,12 @@ toggleAuraSeatBtn.MouseButton1Click:Connect(function()
 	toggleAuraSeat(not isAuraSeatEnabled)
 end)
 
--- Đóng Menu giải phóng tài nguyên hệ thống
+-- GIAO DIỆN NÚT ĐÓNG (GỠ BỎ TOÀN BỘ SỰ KIỆN ĐỂ TRÁNH RÒ RỈ BỘ NHỚ)
 closeButton.MouseButton1Click:Connect(function()
 	toggleAntiGrab(false)
 	toggleAuraSeat(false)
 	isFlingEnabled = false
 	if childAddedConn then childAddedConn:Disconnect() end
+	invisibleSeat:Destroy()
 	screenGui:Destroy()
 end)
