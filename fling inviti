@@ -3,22 +3,25 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
--- ==========================================
--- TẠO GIAO DIỆN (UI)
--- ==========================================
+-- Định tuyến trực tiếp đến RemoteEvent nội bộ của game
+local CharacterEvents = ReplicatedStorage:WaitForChild("CharacterEvents", 5)
+local StruggleEvent = CharacterEvents and CharacterEvents:WaitForChild("Struggle", 5)
 
+-- ==========================================
+-- 1. TẠO GIAO DIỆN ĐIỀU KHIỂN (GUI)
+-- ==========================================
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "FlingControlPanel"
+screenGui.Name = "SystemControlPanel"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Khung Menu chính (Tăng chiều cao lên 270 để chứa 3 nút)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 270)
+mainFrame.Size = UDim2.new(0, 220, 0, 255)
 mainFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 mainFrame.BorderSizePixel = 0
@@ -29,19 +32,17 @@ local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 8)
 frameCorner.Parent = mainFrame
 
--- Tiêu đề Menu
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -35, 0, 35)
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Fling Control"
+titleLabel.Text = "System Control"
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextSize = 18
 titleLabel.TextColor3 = Color3.fromRGB(0, 120, 255)
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = mainFrame
 
--- Nút Đóng
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 25, 0, 25)
 closeButton.Position = UDim2.new(1, -30, 0, 5)
@@ -56,22 +57,23 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 6)
 closeCorner.Parent = closeButton
 
--- 1. Nút Bật/Tắt Fling (Grab)
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(1, -20, 0, 40)
-toggleButton.Position = UDim2.new(0, 10, 0, 45)
-toggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-toggleButton.Text = "Fling: ON"
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 18
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Parent = mainFrame
-Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 6)
+local toggleFlingBtn = Instance.new("TextButton")
+toggleFlingBtn.Size = UDim2.new(1, -20, 0, 35)
+toggleFlingBtn.Position = UDim2.new(0, 10, 0, 40)
+toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+toggleFlingBtn.Text = "Fling: ON"
+toggleFlingBtn.Font = Enum.Font.SourceSansBold
+toggleFlingBtn.TextSize = 16
+toggleFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleFlingBtn.Parent = mainFrame
 
--- Ô Nhập Tốc Độ (TextBox)
+local flingCorner = Instance.new("UICorner")
+flingCorner.CornerRadius = UDim.new(0, 6)
+flingCorner.Parent = toggleFlingBtn
+
 local speedInput = Instance.new("TextBox")
-speedInput.Size = UDim2.new(1, -20, 0, 40)
-speedInput.Position = UDim2.new(0, 10, 0, 95)
+speedInput.Size = UDim2.new(1, -20, 0, 35)
+speedInput.Position = UDim2.new(0, 10, 0, 80)
 speedInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 speedInput.Text = "850"
 speedInput.PlaceholderText = "Nhập tốc độ (Max 5000)"
@@ -80,69 +82,74 @@ speedInput.TextSize = 16
 speedInput.TextColor3 = Color3.fromRGB(0, 120, 255)
 speedInput.ClearTextOnFocus = false
 speedInput.Parent = mainFrame
-Instance.new("UICorner", speedInput).CornerRadius = UDim.new(0, 6)
 
--- Gợi ý nhỏ dưới ô nhập
-local tipLabel = Instance.new("TextLabel")
-tipLabel.Size = UDim2.new(1, -20, 0, 20)
-tipLabel.Position = UDim2.new(0, 10, 0, 140)
-tipLabel.BackgroundTransparency = 1
-tipLabel.Text = "Giới hạn tốc độ tối đa: 5000"
-tipLabel.Font = Enum.Font.SourceSansItalic
-tipLabel.TextSize = 12
-tipLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-tipLabel.Parent = mainFrame
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0, 6)
+inputCorner.Parent = speedInput
 
--- 2. Nút Bật/Tắt Đứng Yên (Khóa Cứng)
-local freezeButton = Instance.new("TextButton")
-freezeButton.Size = UDim2.new(1, -20, 0, 40)
-freezeButton.Position = UDim2.new(0, 10, 0, 165)
-freezeButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-freezeButton.Text = "Đứng Yên (Anchor): OFF"
-freezeButton.Font = Enum.Font.SourceSansBold
-freezeButton.TextSize = 16
-freezeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-freezeButton.Parent = mainFrame
-Instance.new("UICorner", freezeButton).CornerRadius = UDim.new(0, 6)
+local toggleAntiGrabBtn = Instance.new("TextButton")
+toggleAntiGrabBtn.Size = UDim2.new(1, -20, 0, 35)
+toggleAntiGrabBtn.Position = UDim2.new(0, 10, 0, 120)
+toggleAntiGrabBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+toggleAntiGrabBtn.Text = "Anti-Grab: OFF"
+toggleAntiGrabBtn.Font = Enum.Font.SourceSansBold
+toggleAntiGrabBtn.TextSize = 16
+toggleAntiGrabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleAntiGrabBtn.Parent = mainFrame
 
--- 3. NÚT MỚI: Touch Fling (Đứng Im + Chạm Là Văng)
-local touchFlingButton = Instance.new("TextButton")
-touchFlingButton.Size = UDim2.new(1, -20, 0, 40)
-touchFlingButton.Position = UDim2.new(0, 10, 0, 215)
-touchFlingButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-touchFlingButton.Text = "Touch Fling: OFF"
-touchFlingButton.Font = Enum.Font.SourceSansBold
-touchFlingButton.TextSize = 16
-touchFlingButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-touchFlingButton.Parent = mainFrame
-Instance.new("UICorner", touchFlingButton).CornerRadius = UDim.new(0, 6)
+local antiGrabCorner = Instance.new("UICorner")
+antiGrabCorner.CornerRadius = UDim.new(0, 6)
+antiGrabCorner.Parent = toggleAntiGrabBtn
 
+-- TẠO NÚT THỨ 3: AURA SEAT VOID
+local toggleAuraSeatBtn = Instance.new("TextButton")
+toggleAuraSeatBtn.Size = UDim2.new(1, -20, 0, 35)
+toggleAuraSeatBtn.Position = UDim2.new(0, 10, 0, 160)
+toggleAuraSeatBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+toggleAuraSeatBtn.Text = "Aura Seat: OFF"
+toggleAuraSeatBtn.Font = Enum.Font.SourceSansBold
+toggleAuraSeatBtn.TextSize = 16
+toggleAuraSeatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleAuraSeatBtn.Parent = mainFrame
 
--- ==========================================
--- XỬ LÝ LOGIC HOẠT ĐỘNG
--- ==========================================
+local auraSeatCorner = Instance.new("UICorner")
+auraSeatCorner.CornerRadius = UDim.new(0, 6)
+auraSeatCorner.Parent = toggleAuraSeatBtn
 
-local isFlingEnabled = true
-local flingSpeed = 850 
+-- Kéo thả di chuyển UI
+local isDragging = false
+local dragStartPos, frameStartPos
 
-local isFrozen = false
-local isTouchFlinging = false
-local touchFlingConnection = nil
-local savedCFrame = nil
-
--- Logic 1: Bật/Tắt Fling (Grab)
-toggleButton.MouseButton1Click:Connect(function()
-	isFlingEnabled = not isFlingEnabled
-	if isFlingEnabled then
-		toggleButton.Text = "Fling: ON"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-	else
-		toggleButton.Text = "Fling: OFF"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+mainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		isDragging = true
+		dragStartPos = input.Position
+		frameStartPos = mainFrame.Position
 	end
 end)
 
--- Logic 2: Giới hạn tốc độ TextBox
+UserInputService.InputChanged:Connect(function(input)
+	if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStartPos
+		mainFrame.Position = UDim2.new(
+			frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, 
+			frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		isDragging = false
+	end
+end)
+
+-- ==========================================
+-- 2. XỬ LÝ LOGIC FLING
+-- ==========================================
+local isFlingEnabled = true
+local flingSpeed = 850
+
 speedInput:GetPropertyChangedSignal("Text"):Connect(function()
 	local numericText = speedInput.Text:gsub("%D", "")
 	if numericText ~= "" then
@@ -155,138 +162,25 @@ speedInput:GetPropertyChangedSignal("Text"):Connect(function()
 	end
 end)
 
--- Logic 3: Đứng Yên cơ bản (Anchored)
-freezeButton.MouseButton1Click:Connect(function()
-	isFrozen = not isFrozen
-	local character = localPlayer.Character
-	
-	if isFrozen then
-		-- Tắt Touch Fling nếu đang bật (Hai tính năng xung đột nhau)
-		if isTouchFlinging then
-			isTouchFlinging = false
-			touchFlingButton.Text = "Touch Fling: OFF"
-			touchFlingButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-			if touchFlingConnection then touchFlingConnection:Disconnect() end
-		end
-		
-		freezeButton.Text = "Đứng Yên (Anchor): ON"
-		freezeButton.BackgroundColor3 = Color3.fromRGB(230, 120, 0)
+toggleFlingBtn.MouseButton1Click:Connect(function()
+	isFlingEnabled = not isFlingEnabled
+	if isFlingEnabled then
+		toggleFlingBtn.Text = "Fling: ON"
+		toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
 	else
-		freezeButton.Text = "Đứng Yên (Anchor): OFF"
-		freezeButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-	end
-	
-	if character and character:FindFirstChild("HumanoidRootPart") then
-		character.HumanoidRootPart.Anchored = isFrozen
+		toggleFlingBtn.Text = "Fling: OFF"
+		toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 	end
 end)
 
--- Logic 4: Touch Fling (Đứng Im + Chạm Là Văng)
-touchFlingButton.MouseButton1Click:Connect(function()
-	isTouchFlinging = not isTouchFlinging
-	local character = localPlayer.Character
-	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	
-	if isTouchFlinging then
-		-- Tắt Đứng Yên cơ bản nếu đang bật
-		if isFrozen then
-			isFrozen = false
-			freezeButton.Text = "Đứng Yên (Anchor): OFF"
-			freezeButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-		end
-		
-		touchFlingButton.Text = "Touch Fling: ON"
-		touchFlingButton.BackgroundColor3 = Color3.fromRGB(150, 0, 200) -- Màu Tím báo hiệu nguy hiểm
-		
-		if rootPart then
-			rootPart.Anchored = false -- Bắt buộc phải tắt Anchor thì lực mới truyền sang người khác được
-			savedCFrame = rootPart.CFrame
-			
-			-- Tạo BodyPosition để giữ nhân vật không bị bay đi
-			local bp = Instance.new("BodyPosition")
-			bp.Name = "TouchFlingBP"
-			bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-			bp.Position = savedCFrame.Position
-			bp.Parent = rootPart
-			
-			-- Vòng lặp bơm vận tốc ảo và khóa CFrame
-			touchFlingConnection = RunService.Stepped:Connect(function()
-				if character and character:FindFirstChild("HumanoidRootPart") then
-					-- Lực xoay vật lý cực mạnh để tạo Fling
-					character.HumanoidRootPart.RotVelocity = Vector3.new(50000, 50000, 50000)
-					-- Ép hình ảnh nhân vật đứng im tại một vị trí
-					character.HumanoidRootPart.CFrame = savedCFrame
-				end
-			end)
-		end
-	else
-		touchFlingButton.Text = "Touch Fling: OFF"
-		touchFlingButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-		
-		if touchFlingConnection then
-			touchFlingConnection:Disconnect()
-			touchFlingConnection = nil
-		end
-		if rootPart then
-			local bp = rootPart:FindFirstChild("TouchFlingBP")
-			if bp then bp:Destroy() end
-			rootPart.RotVelocity = Vector3.zero
-		end
-	end
-end)
-
--- Xử lý khi nhân vật chết và Hồi sinh
-localPlayer.CharacterAdded:Connect(function(character)
-	task.wait(0.5)
-	
-	-- Giữ trạng thái Đứng Yên (Anchor)
-	if isFrozen and character:FindFirstChild("HumanoidRootPart") then
-		character.HumanoidRootPart.Anchored = true
-	end
-	
-	-- Tắt Touch Fling để tránh lỗi vật lý khi hồi sinh
-	if isTouchFlinging then
-		isTouchFlinging = false
-		touchFlingButton.Text = "Touch Fling: OFF"
-		touchFlingButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-		if touchFlingConnection then 
-			touchFlingConnection:Disconnect()
-			touchFlingConnection = nil
-		end
-	end
-end)
-
--- Nút Đóng & Kéo Thả Menu (Giữ nguyên)
-closeButton.MouseButton1Click:Connect(function() screenGui:Destroy() end)
-
-local isDragging, dragStartPos, frameStartPos = false, nil, nil
-mainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDragging = true
-		dragStartPos = input.Position
-		frameStartPos = mainFrame.Position
-	end
-end)
-UserInputService.InputChanged:Connect(function(input)
-	if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStartPos
-		mainFrame.Position = UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y)
-	end
-end)
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDragging = false
-	end
-end)
-
--- Logic Fling GrabParts (Giữ nguyên)
-Workspace.ChildAdded:Connect(function(child)
+local childAddedConn = Workspace.ChildAdded:Connect(function(child)
 	if child.Name == "GrabParts" then
 		local grabPart = child:FindFirstChild("GrabPart")
 		if not grabPart then return end
 		local weldConstraint = grabPart:FindFirstChild("WeldConstraint")
 		if not weldConstraint or not weldConstraint.Part1 then return end
 		local targetPart = weldConstraint.Part1
+		
 		local bodyVelocity = Instance.new("BodyVelocity")
 		bodyVelocity.Parent = targetPart
 		
@@ -298,8 +192,181 @@ Workspace.ChildAdded:Connect(function(child)
 				else
 					bodyVelocity.MaxForce = Vector3.zero
 				end
-				Debris:AddItem(bodyVelocity, 1)
+				Debris:AddItem(bodyVelocity, 100)
 			end
 		end)
 	end
+end)
+
+-- ==========================================
+-- 3. CƠ CHẾ ANTI-GRAB & ANTI-ROLL (NATIVE)
+-- ==========================================
+local isAntiGrabEnabled = false
+local antiGrabLoop = nil
+
+local function executeNativeAntiGrab()
+	local char = localPlayer.Character
+	if not char then return end
+	
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+
+	if hrp and humanoid then
+		hrp.RotVelocity = Vector3.new(0, hrp.RotVelocity.Y, 0)
+		local _, yOrientation, _ = hrp.CFrame:ToOrientation()
+		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, yOrientation, 0)
+		
+		if humanoid:GetState() == Enum.HumanoidStateType.FallingDown or humanoid:GetState() == Enum.HumanoidStateType.Ragdoll then
+			humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+		end
+	end
+
+	if StruggleEvent then
+		local isHeld = localPlayer:FindFirstChild("IsHeld")
+		if isHeld and isHeld.Value == true then
+			StruggleEvent:FireServer(localPlayer)
+		end
+	end
+	
+	for _, obj in ipairs(char:GetDescendants()) do
+		if obj:IsA("WeldConstraint") or obj:IsA("Weld") then
+			local p0 = obj.Part0
+			local p1 = obj.Part1
+			if (p0 and p0.Name == "GrabPart") or (p1 and p1.Name == "GrabPart") then
+				if StruggleEvent then
+					StruggleEvent:FireServer(localPlayer)
+				end
+			end
+		end
+	end
+end
+
+local function toggleAntiGrab(state)
+	isAntiGrabEnabled = state
+	if antiGrabLoop then antiGrabLoop:Disconnect() antiGrabLoop = nil end
+	
+	if isAntiGrabEnabled then
+		toggleAntiGrabBtn.Text = "Anti-Grab/Roll: ON"
+		toggleAntiGrabBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+		antiGrabLoop = RunService.RenderStepped:Connect(function()
+			executeNativeAntiGrab()
+		end)
+	else
+		toggleAntiGrabBtn.Text = "Anti-Grab/Roll: OFF"
+		toggleAntiGrabBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+	end
+end
+
+toggleAntiGrabBtn.MouseButton1Click:Connect(function()
+	toggleAntiGrab(not isAntiGrabEnabled)
+end)
+
+-- ==========================================
+-- 4. CƠ CHẾ AURA SEAT VOID (NÚT 3)
+-- ==========================================
+local isAuraSeatEnabled = false
+local auraSeatLoop = nil
+local auraRadius = 25 -- Bán kính quét Player xung quanh
+local activeSeats = {} -- Lưu trữ danh sách ghế đã tạo ra để quản lý
+
+-- Hàm tìm kiếm một Part hợp lệ có sẵn trong map để chuyển đổi
+local function findAvailablePart()
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("Part") and obj.CanCollide and not obj.Anchored and obj.Size.Magnitude > 1 then
+			if not obj:FindFirstAncestorOfClass("Model") or not Players:GetPlayerFromCharacter(obj:FindFirstAncestorOfClass("Model")) then
+				-- Đảm bảo Part không thuộc về bất kỳ người chơi nào và chưa bị biến thành ghế
+				if not obj:IsA("Seat") and not activeSeats[obj] then
+					return obj
+				end
+			end
+		end
+	end
+	return nil
+end
+
+local function executeAuraSeat()
+	local myChar = localPlayer.Character
+	if not myChar then return end
+	local myHrp = myChar:FindFirstChild("HumanoidRootPart")
+	if not myHrp then return end
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= localPlayer and p.Character then
+			local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
+			local enemyHumanoid = p.Character:FindFirstChildOfClass("Humanoid")
+			
+			if enemyHrp and enemyHumanoid and enemyHumanoid.Health > 0 then
+				-- Kiểm tra xem Player này đã ngồi (Seat) hoặc đã bị kéo đi chưa
+				if enemyHumanoid.Sit == false then
+					local distance = (myHrp.Position - enemyHrp.Position).Magnitude
+					if distance <= auraRadius then
+						
+						-- Lấy 1 Part ngẫu nhiên có sẵn trong Workspace
+						local targetPart = findAvailablePart()
+						if targetPart then
+							-- Biến đổi thuộc tính thành ghế tàng hình
+							activeSeats[targetPart] = true
+							targetPart.Transparency = 1
+							targetPart.CanCollide = true
+							
+							-- Ép kiểu/Tạo thực thể Seat đè lên tọa độ Part nếu cần, hoặc di chuyển trực tiếp Part có sẵn
+							local seat = Instance.new("Seat")
+							seat.Size = Vector3.new(2, 1, 2)
+							seat.Transparency = 1
+							seat.CFrame = enemyHrp.CFrame * CFrame.new(0, -0.5, 0)
+							seat.Parent = Workspace
+							
+							-- Lắng nghe sự kiện khi có mục tiêu ngồi vào ghế
+							seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+								if seat.Occupant == enemyHumanoid then
+									task.wait(0.05) -- Đợi đồng bộ hóa vật lý nhân vật
+									seat.Anchored = true
+									-- Dịch chuyển ghế thẳng xuống dưới -1000 trục Y mang theo Player
+									seat.CFrame = CFrame.new(seat.Position.X, -1000, seat.Position.Z)
+									
+									-- Dọn dẹp đối tượng sau khi thực thi thành công
+									task.wait(1)
+									seat:Destroy()
+								end
+							end)
+							
+							-- Cơ chế dọn dẹp dự phòng nếu không ai ngồi sau 3 giây
+							Debris:AddItem(seat, 3)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+local function toggleAuraSeat(state)
+	isAuraSeatEnabled = state
+	if auraSeatLoop then auraSeatLoop:Disconnect() auraSeatLoop = nil end
+	
+	if isAuraSeatEnabled then
+		toggleAuraSeatBtn.Text = "Aura Seat: ON"
+		toggleAuraSeatBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+		
+		auraSeatLoop = RunService.RenderStepped:Connect(function()
+			executeAuraSeat()
+		end)
+	else
+		toggleAuraSeatBtn.Text = "Aura Seat: OFF"
+		toggleAuraSeatBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+		table.clear(activeSeats)
+	end
+end
+
+toggleAuraSeatBtn.MouseButton1Click:Connect(function()
+	toggleAuraSeat(not isAuraSeatEnabled)
+end)
+
+-- Đóng Menu giải phóng tài nguyên hệ thống
+closeButton.MouseButton1Click:Connect(function()
+	toggleAntiGrab(false)
+	toggleAuraSeat(false)
+	isFlingEnabled = false
+	if childAddedConn then childAddedConn:Disconnect() end
+	screenGui:Destroy()
 end)
