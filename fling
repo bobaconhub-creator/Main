@@ -2,6 +2,7 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService") -- Thêm RunService cho Anti-Grab
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
@@ -15,9 +16,9 @@ screenGui.Name = "FlingControlPanel"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Khung Menu chính (Màu trắng)
+-- Khung Menu chính (Mở rộng chiều cao lên 215 để vừa nút mới)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 180)
+mainFrame.Size = UDim2.new(0, 220, 0, 215)
 mainFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Nền trắng
 mainFrame.BorderSizePixel = 0
@@ -55,14 +56,14 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 6)
 closeCorner.Parent = closeButton
 
--- Nút Bật/Tắt Fling
+-- Nút 1: Bật/Tắt Fling
 local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(1, -20, 0, 40)
-toggleButton.Position = UDim2.new(0, 10, 0, 45)
+toggleButton.Size = UDim2.new(1, -20, 0, 35)
+toggleButton.Position = UDim2.new(0, 10, 0, 40)
 toggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0) -- Mặc định ON là màu xanh lá
 toggleButton.Text = "Fling: ON"
 toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 18
+toggleButton.TextSize = 16
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Parent = mainFrame
 
@@ -72,8 +73,8 @@ toggleCorner.Parent = toggleButton
 
 -- Ô Nhập Tốc Độ (TextBox)
 local speedInput = Instance.new("TextBox")
-speedInput.Size = UDim2.new(1, -20, 0, 40)
-speedInput.Position = UDim2.new(0, 10, 0, 95)
+speedInput.Size = UDim2.new(1, -20, 0, 35)
+speedInput.Position = UDim2.new(0, 10, 0, 80)
 speedInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 speedInput.Text = "850" -- Giá trị mặc định ban đầu
 speedInput.PlaceholderText = "Nhập tốc độ (Max 5000)"
@@ -87,10 +88,25 @@ local inputCorner = Instance.new("UICorner")
 inputCorner.CornerRadius = UDim.new(0, 6)
 inputCorner.Parent = speedInput
 
+-- Nút 2: Bật/Tắt Anti-Grab (Mới thêm)
+local antiGrabButton = Instance.new("TextButton")
+antiGrabButton.Size = UDim2.new(1, -20, 0, 35)
+antiGrabButton.Position = UDim2.new(0, 10, 0, 120)
+antiGrabButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Mặc định OFF là màu đỏ
+antiGrabButton.Text = "Anti-Grab: OFF"
+antiGrabButton.Font = Enum.Font.SourceSansBold
+antiGrabButton.TextSize = 16
+antiGrabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+antiGrabButton.Parent = mainFrame
+
+local antiGrabCorner = Instance.new("UICorner")
+antiGrabCorner.CornerRadius = UDim.new(0, 6)
+antiGrabCorner.Parent = antiGrabButton
+
 -- Gợi ý nhỏ dưới ô nhập
 local tipLabel = Instance.new("TextLabel")
 tipLabel.Size = UDim2.new(1, -20, 0, 20)
-tipLabel.Position = UDim2.new(0, 10, 0, 140)
+tipLabel.Position = UDim2.new(0, 10, 0, 160)
 tipLabel.BackgroundTransparency = 1
 tipLabel.Text = "Giới hạn tốc độ tối đa: 5000"
 tipLabel.Font = Enum.Font.SourceSansItalic
@@ -104,8 +120,10 @@ tipLabel.Parent = mainFrame
 
 local isFlingEnabled = true
 local flingSpeed = 850 -- Biến lưu trữ tốc độ hiện tại
+local isAntiGrabEnabled = false
+local antiGrabConnection = nil
 
--- 1. Bật/Tắt Fling
+-- 1. Bật/Tắt Fling (Nút 1)
 toggleButton.MouseButton1Click:Connect(function()
 	isFlingEnabled = not isFlingEnabled
 	if isFlingEnabled then
@@ -119,27 +137,86 @@ end)
 
 -- 2. Giới hạn ô nhập tối đa 5000
 speedInput:GetPropertyChangedSignal("Text"):Connect(function()
-	-- Chỉ cho phép nhập số
 	local numericText = speedInput.Text:gsub("%D", "")
-	
 	if numericText ~= "" then
 		local num = tonumber(numericText)
 		if num > 5000 then
-			num = 5000 -- Ép về 5000 nếu vượt quá
+			num = 5000
 		end
 		flingSpeed = num
 		speedInput.Text = tostring(num)
 	else
-		flingSpeed = 0 -- Nếu xóa hết chữ thì tốc độ về 0
+		flingSpeed = 0
 	end
 end)
 
--- 3. Nút đóng Menu
+-- 3. Logic xử lý Bật/Tắt Anti-Grab (Nút 2)
+local function ToggleAntiGrab(state)
+	isAntiGrabEnabled = state
+	if isAntiGrabEnabled then
+		antiGrabConnection = RunService.RenderStepped:Connect(function()
+			local character = localPlayer.Character
+			if not character then return end
+			
+			-- Lớp 1 & 2: Quét dọn các liên kết và lực đẩy dính vào người mình
+			for _, descendant in ipairs(character:GetDescendants()) do
+				if descendant:IsA("Weld") or descendant:IsA("WeldConstraint") or descendant:IsA("Motor6D") then
+					local part0 = descendant.Part0
+					local part1 = descendant.Part1
+					
+					local owner0 = part0 and part0.Parent and Players:GetPlayerFromCharacter(part0.Parent)
+					local owner1 = part1 and part1.Parent and Players:GetPlayerFromCharacter(part1.Parent)
+					
+					-- Nếu có ai khác hàn vào người mình, hủy liên kết ngay lập tức
+					if (owner0 and owner0 ~= localPlayer) or (owner1 and owner1 ~= localPlayer) then
+						descendant:Destroy()
+					end
+				end
+				
+				if descendant:IsA("BodyVelocity") or descendant:IsA("LinearVelocity") or descendant:IsA("BodyThrust") then
+					descendant:Destroy()
+				end
+			end
+			
+			-- Lớp 3: Chống bị ném văng tốc độ cao
+			local rootPart = character:FindFirstChild("HumanoidRootPart")
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if rootPart and humanoid then
+				if rootPart.AssemblyLinearVelocity.Magnitude > 75 then 
+					rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+					rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+					humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+				end
+			end
+		end)
+	else
+		if antiGrabConnection then
+			antiGrabConnection:Disconnect()
+			antiGrabConnection = nil
+		end
+	end
+end
+
+antiGrabButton.MouseButton1Click:Connect(function()
+	isAntiGrabEnabled = not isAntiGrabEnabled
+	ToggleAntiGrab(isAntiGrabEnabled)
+	
+	if isAntiGrabEnabled then
+		antiGrabButton.Text = "Anti-Grab: ON"
+		antiGrabButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0) -- Đổi sang màu xanh lá khi bật
+	else
+		antiGrabButton.Text = "Anti-Grab: OFF"
+		antiGrabButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0) -- Về màu đỏ khi tắt
+	end
+end)
+
+-- 4. Nút đóng Menu
 closeButton.MouseButton1Click:Connect(function()
+	if antiGrabConnection then antiGrabConnection:Disconnect() end -- Xóa vòng lặp khi đóng menu
 	screenGui:Destroy()
 end)
 
--- 4. Kéo thả di chuyển Menu (Drag GUI)
+-- 5. Kéo thả di chuyển Menu (Drag GUI)
 local isDragging = false
 local dragStartPos
 local frameStartPos
@@ -170,7 +247,7 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
--- 5. Logic Fling đồng bộ theo tốc độ trong TextBox
+-- 6. Logic Fling đồng bộ theo tốc độ trong TextBox
 Workspace.ChildAdded:Connect(function(child)
 	if child.Name == "GrabParts" then
 		local grabPart = child:FindFirstChild("GrabPart")
@@ -187,12 +264,11 @@ Workspace.ChildAdded:Connect(function(child)
 			if not child.Parent then
 				if isFlingEnabled then
 					bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-					-- Sử dụng biến flingSpeed đã được cập nhật từ TextBox thay cho số 850 cũ
 					bodyVelocity.Velocity = Workspace.CurrentCamera.CFrame.LookVector * flingSpeed
 				else
 					bodyVelocity.MaxForce = Vector3.zero
 				end
-				Debris:AddItem(bodyVelocity, 1)
+				Debris:AddItem(bodyVelocity, 100)
 			end
 		end)
 	end
