@@ -234,10 +234,10 @@ local function executeNativeAntiGrab()
         end
     end
 
-    -- 3.2 GỬI PACKET GIẢI PHÓNG KHI BỊ TÓM (Anti-Grab)
-    if StruggleEvent then
-        local isHeld = localPlayer:FindFirstChild("IsHeld")
-        if isHeld and isHeld.Value == true then
+    -- 3.2 GỬI STRUGGLE 120 LẦN/GIÂY KHI BẬT ANTI-GRAB
+    if StruggleEvent and isAntiGrabEnabled then
+        -- Gửi StruggleEvent 120 lần/giây (2 lần mỗi frame ở 60fps)
+        for i = 1, 2 do
             StruggleEvent:FireServer(localPlayer)
         end
     end
@@ -248,7 +248,7 @@ local function executeNativeAntiGrab()
             local p0 = obj.Part0
             local p1 = obj.Part1
             if (p0 and p0.Name == "GrabPart") or (p1 and p1.Name == "GrabPart") then
-                if StruggleEvent then
+                if StruggleEvent and isAntiGrabEnabled then
                     StruggleEvent:FireServer(localPlayer)
                 end
             end
