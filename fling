@@ -8,6 +8,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
+-- ==========================================
+-- KIỂM TRA VÀ XÓA GUI CŨ (CHỐNG SPAM)
+-- ==========================================
+local GUI_NAME = "SystemControlPanel"
+
+-- Tìm và xóa GUI cũ nếu tồn tại
+local existingGUI = playerGui:FindFirstChild(GUI_NAME)
+if existingGUI then
+    existingGUI:Destroy()
+end
+
 -- Định tuyến trực tiếp đến RemoteEvent nội bộ của game
 local CharacterEvents = ReplicatedStorage:WaitForChild("CharacterEvents", 5)
 local StruggleEvent = CharacterEvents and CharacterEvents:WaitForChild("Struggle", 5)
@@ -16,12 +27,12 @@ local StruggleEvent = CharacterEvents and CharacterEvents:WaitForChild("Struggle
 -- 1. TẠO GIAO DIỆN ĐIỀU KHIỂN (GUI)
 -- ==========================================
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SystemControlPanel"
+screenGui.Name = GUI_NAME
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 215)
+mainFrame.Size = UDim2.new(0, 220, 0, 195)
 mainFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 mainFrame.BorderSizePixel = 0
@@ -101,32 +112,44 @@ local antiGrabCorner = Instance.new("UICorner")
 antiGrabCorner.CornerRadius = UDim.new(0, 6)
 antiGrabCorner.Parent = toggleAntiGrabBtn
 
+-- Thêm thông báo phím tắt
+local hotkeyLabel = Instance.new("TextLabel")
+hotkeyLabel.Size = UDim2.new(1, -20, 0, 20)
+hotkeyLabel.Position = UDim2.new(0, 10, 0, 160)
+hotkeyLabel.BackgroundTransparency = 1
+hotkeyLabel.Text = "F1: GUI | F2: Fling | F3: Anti-Grab"
+hotkeyLabel.Font = Enum.Font.SourceSans
+hotkeyLabel.TextSize = 12
+hotkeyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+hotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+hotkeyLabel.Parent = mainFrame
+
 -- Kéo thả di chuyển UI
 local isDragging = false
 local dragStartPos, frameStartPos
 
 mainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDragging = true
-		dragStartPos = input.Position
-		frameStartPos = mainFrame.Position
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = true
+        dragStartPos = input.Position
+        frameStartPos = mainFrame.Position
+    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStartPos
-		mainFrame.Position = UDim2.new(
-			frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, 
-			frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y
-		)
-	end
+    if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartPos
+        mainFrame.Position = UDim2.new(
+            frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, 
+            frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y
+        )
+    end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		isDragging = false
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = false
+    end
 end)
 
 -- ==========================================
@@ -136,51 +159,51 @@ local isFlingEnabled = true
 local flingSpeed = 850
 
 speedInput:GetPropertyChangedSignal("Text"):Connect(function()
-	local numericText = speedInput.Text:gsub("%D", "")
-	if numericText ~= "" then
-		local num = tonumber(numericText)
-		if num > 5000 then num = 5000 end
-		flingSpeed = num
-		speedInput.Text = tostring(num)
-	else
-		flingSpeed = 0
-	end
+    local numericText = speedInput.Text:gsub("%D", "")
+    if numericText ~= "" then
+        local num = tonumber(numericText)
+        if num > 5000 then num = 5000 end
+        flingSpeed = num
+        speedInput.Text = tostring(num)
+    else
+        flingSpeed = 0
+    end
 end)
 
 toggleFlingBtn.MouseButton1Click:Connect(function()
-	isFlingEnabled = not isFlingEnabled
-	if isFlingEnabled then
-		toggleFlingBtn.Text = "Fling: ON"
-		toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-	else
-		toggleFlingBtn.Text = "Fling: OFF"
-		toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-	end
+    isFlingEnabled = not isFlingEnabled
+    if isFlingEnabled then
+        toggleFlingBtn.Text = "Fling: ON"
+        toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+    else
+        toggleFlingBtn.Text = "Fling: OFF"
+        toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    end
 end)
 
 local childAddedConn = Workspace.ChildAdded:Connect(function(child)
-	if child.Name == "GrabParts" then
-		local grabPart = child:FindFirstChild("GrabPart")
-		if not grabPart then return end
-		local weldConstraint = grabPart:FindFirstChild("WeldConstraint")
-		if not weldConstraint or not weldConstraint.Part1 then return end
-		local targetPart = weldConstraint.Part1
-		
-		local bodyVelocity = Instance.new("BodyVelocity")
-		bodyVelocity.Parent = targetPart
-		
-		child:GetPropertyChangedSignal("Parent"):Connect(function()
-			if not child.Parent then
-				if isFlingEnabled then
-					bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-					bodyVelocity.Velocity = Workspace.CurrentCamera.CFrame.LookVector * flingSpeed
-				else
-					bodyVelocity.MaxForce = Vector3.zero
-				end
-				Debris:AddItem(bodyVelocity, 100)
-			end
-		end)
-	end
+    if child.Name == "GrabParts" then
+        local grabPart = child:FindFirstChild("GrabPart")
+        if not grabPart then return end
+        local weldConstraint = grabPart:FindFirstChild("WeldConstraint")
+        if not weldConstraint or not weldConstraint.Part1 then return end
+        local targetPart = weldConstraint.Part1
+        
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Parent = targetPart
+        
+        child:GetPropertyChangedSignal("Parent"):Connect(function()
+            if not child.Parent then
+                if isFlingEnabled then
+                    bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                    bodyVelocity.Velocity = Workspace.CurrentCamera.CFrame.LookVector * flingSpeed
+                else
+                    bodyVelocity.MaxForce = Vector3.zero
+                end
+                Debris:AddItem(bodyVelocity, 100)
+            end
+        end)
+    end
 end)
 
 -- ==========================================
@@ -190,79 +213,137 @@ local isAntiGrabEnabled = false
 local antiGrabLoop = nil
 
 local function executeNativeAntiGrab()
-	local char = localPlayer.Character
-	if not char then return end
-	
-	local humanoid = char:FindFirstChildOfClass("Humanoid")
-	local hrp = char:FindFirstChild("HumanoidRootPart")
+    local char = localPlayer.Character
+    if not char then return end
+    
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
 
-	-- 3.1 CƠ CHẾ ANTI-ROLL (Giữ đứng thẳng & chống té ngã)
-	if hrp and humanoid then
-		-- Triệt tiêu các lực xoay không mong muốn gây lật nhân vật
-		hrp.RotVelocity = Vector3.new(0, hrp.RotVelocity.Y, 0)
-		
-		-- Ép góc quay (CFrame) chỉ xoay quanh trục Y (giữ thăng bằng mặt đất)
-		local _, yOrientation, _ = hrp.CFrame:ToOrientation()
-		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, yOrientation, 0)
-		
-		-- Ngăn chặn các trạng thái té ngã (FallingDown, Ragdoll do game ép)
-		if humanoid:GetState() == Enum.HumanoidStateType.FallingDown or humanoid:GetState() == Enum.HumanoidStateType.Ragdoll then
-			humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-		end
-	end
+    -- 3.1 CƠ CHẾ ANTI-ROLL (Giữ đứng thẳng & chống té ngã)
+    if hrp and humanoid then
+        -- Triệt tiêu các lực xoay không mong muốn gây lật nhân vật
+        hrp.RotVelocity = Vector3.new(0, hrp.RotVelocity.Y, 0)
+        
+        -- Ép góc quay (CFrame) chỉ xoay quanh trục Y (giữ thăng bằng mặt đất)
+        local _, yOrientation, _ = hrp.CFrame:ToOrientation()
+        hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, yOrientation, 0)
+        
+        -- Ngăn chặn các trạng thái té ngã (FallingDown, Ragdoll do game ép)
+        if humanoid:GetState() == Enum.HumanoidStateType.FallingDown or humanoid:GetState() == Enum.HumanoidStateType.Ragdoll then
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end
 
-	-- 3.2 GỬI PACKET GIẢI PHÓNG KHI BỊ TÓM (Anti-Grab)
-	if StruggleEvent then
-		local isHeld = localPlayer:FindFirstChild("IsHeld")
-		if isHeld and isHeld.Value == true then
-			StruggleEvent:FireServer(localPlayer)
-		end
-	end
-	
-	-- 3.3 QUÉT LIÊN KẾT VẬT LÝ (Phòng thủ phụ)
-	for _, obj in ipairs(char:GetDescendants()) do
-		if obj:IsA("WeldConstraint") or obj:IsA("Weld") then
-			local p0 = obj.Part0
-			local p1 = obj.Part1
-			if (p0 and p0.Name == "GrabPart") or (p1 and p1.Name == "GrabPart") then
-				if StruggleEvent then
-					StruggleEvent:FireServer(localPlayer)
-				end
-			end
-		end
-	end
+    -- 3.2 GỬI PACKET GIẢI PHÓNG KHI BỊ TÓM (Anti-Grab)
+    if StruggleEvent then
+        local isHeld = localPlayer:FindFirstChild("IsHeld")
+        if isHeld and isHeld.Value == true then
+            StruggleEvent:FireServer(localPlayer)
+        end
+    end
+    
+    -- 3.3 QUÉT LIÊN KẾT VẬT LÝ (Phòng thủ phụ)
+    for _, obj in ipairs(char:GetDescendants()) do
+        if obj:IsA("WeldConstraint") or obj:IsA("Weld") then
+            local p0 = obj.Part0
+            local p1 = obj.Part1
+            if (p0 and p0.Name == "GrabPart") or (p1 and p1.Name == "GrabPart") then
+                if StruggleEvent then
+                    StruggleEvent:FireServer(localPlayer)
+                end
+            end
+        end
+    end
 end
 
 local function toggleAntiGrab(state)
-	isAntiGrabEnabled = state
-	
-	if antiGrabLoop then
-		antiGrabLoop:Disconnect()
-		antiGrabLoop = nil
-	end
-	
-	if isAntiGrabEnabled then
-		toggleAntiGrabBtn.Text = "Anti-Grab/Roll: ON"
-		toggleAntiGrabBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-		
-		-- Chạy liên tục để triệt tiêu góc nghiêng ngay lập tức
-		antiGrabLoop = RunService.RenderStepped:Connect(function()
-			executeNativeAntiGrab()
-		end)
-	else
-		toggleAntiGrabBtn.Text = "Anti-Grab/Roll: OFF"
-		toggleAntiGrabBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-	end
+    isAntiGrabEnabled = state
+    
+    if antiGrabLoop then
+        antiGrabLoop:Disconnect()
+        antiGrabLoop = nil
+    end
+    
+    if isAntiGrabEnabled then
+        toggleAntiGrabBtn.Text = "Anti-Grab/Roll: ON"
+        toggleAntiGrabBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+        
+        -- Chạy liên tục để triệt tiêu góc nghiêng ngay lập tức
+        antiGrabLoop = RunService.RenderStepped:Connect(function()
+            executeNativeAntiGrab()
+        end)
+    else
+        toggleAntiGrabBtn.Text = "Anti-Grab/Roll: OFF"
+        toggleAntiGrabBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    end
 end
 
 toggleAntiGrabBtn.MouseButton1Click:Connect(function()
-	toggleAntiGrab(not isAntiGrabEnabled)
+    toggleAntiGrab(not isAntiGrabEnabled)
 end)
 
--- Đóng Menu
-closeButton.MouseButton1Click:Connect(function()
-	toggleAntiGrab(false)
-	isFlingEnabled = false
-	if childAddedConn then childAddedConn:Disconnect() end
-	screenGui:Destroy()
+-- ==========================================
+-- 4. PHÍM TẮT ĐIỀU KHIỂN
+-- ==========================================
+
+-- Biến lưu trạng thái hiển thị GUI
+local isGUIVisible = true
+
+-- Hàm toggle GUI
+local function toggleGUI()
+    isGUIVisible = not isGUIVisible
+    screenGui.Enabled = isGUIVisible
+end
+
+-- Hàm toggle Fling
+local function toggleFling()
+    isFlingEnabled = not isFlingEnabled
+    if isFlingEnabled then
+        toggleFlingBtn.Text = "Fling: ON"
+        toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+    else
+        toggleFlingBtn.Text = "Fling: OFF"
+        toggleFlingBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    end
+end
+
+-- Hàm toggle Anti-Grab
+local function toggleAntiGrabFunc()
+    toggleAntiGrab(not isAntiGrabEnabled)
+end
+
+-- Xử lý phím tắt
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    -- F1: Toggle GUI
+    if input.KeyCode == Enum.KeyCode.F1 then
+        toggleGUI()
+    end
+    
+    -- F2: Toggle Fling
+    if input.KeyCode == Enum.KeyCode.F2 then
+        toggleFling()
+    end
+    
+    -- F3: Toggle Anti-Grab
+    if input.KeyCode == Enum.KeyCode.F3 then
+        toggleAntiGrabFunc()
+    end
 end)
+
+-- ==========================================
+-- 5. XỬ LÝ KHI ĐÓNG MENU
+-- ==========================================
+closeButton.MouseButton1Click:Connect(function()
+    toggleAntiGrab(false)
+    isFlingEnabled = false
+    if childAddedConn then childAddedConn:Disconnect() end
+    screenGui:Destroy()
+end)
+
+-- ==========================================
+-- 6. THÔNG BÁO ĐÃ TẠO GUI THÀNH CÔNG
+-- ==========================================
+print("✅ System Control Panel đã được tạo thành công!")
+print("📌 Phím tắt: F1 (GUI) | F2 (Fling) | F3 (Anti-Grab)")
