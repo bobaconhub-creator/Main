@@ -1339,9 +1339,7 @@ AdsBtn1.MouseButton1Click:Connect(function()
     generateMath()
 end)
 
--- ==========================================
--- PHẦN TRÒ CHƠI TÌM XU (ĐÃ SỬA THEO YÊU CẦU)
--- ==========================================
+-- PHẦN TRÒ CHƠI TÌM XU (ĐÃ SỬA - CHỈ 1 XU MỖI LẦN)
 local FindCoinBtn = Instance.new("TextButton", CoinsScroll)
 FindCoinBtn.Size = UDim2.new(0, 180, 0, 40)
 FindCoinBtn.Position = UDim2.new(0, 210, 0, 20)
@@ -1372,14 +1370,32 @@ FindCoinBtn.MouseButton1Click:Connect(function()
     counter.TextSize = 20
     Instance.new("UICorner", counter).CornerRadius = UDim.new(0, 10)
     
-    local spawnedCoins = {}
+    local currentCoin = nil
+    local currentSpinConn = nil
+    local isCollecting = false
     
     local function spawnCoin()
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+        -- Xóa xu cũ nếu có
+        if currentCoin and currentCoin.Parent then
+            if currentSpinConn then 
+                currentSpinConn:Disconnect() 
+                currentSpinConn = nil
+            end
+            currentCoin:Destroy()
+            currentCoin = nil
+        end
         
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then 
+            -- Nếu không có nhân vật, thử lại sau
+            task.wait(0.5)
+            spawnCoin()
+            return 
+        end
+        
+        -- Tạo vị trí xu mới
         local angle = math.random() * 2 * math.pi
-        local distance = math.random() * spawnRadius
+        local distance = math.random(20, spawnRadius) -- Spawn xa hơn 1 chút
         local rx = math.cos(angle) * distance
         local rz = math.sin(angle) * distance
         
@@ -1392,6 +1408,7 @@ FindCoinBtn.MouseButton1Click:Connect(function()
         coin.Anchored = true
         coin.CanCollide = false
         
+        -- Raycast để đặt xu trên mặt đất
         local targetPos = hrp.Position + Vector3.new(rx, 100, rz)
         local params = RaycastParams.new()
         params.FilterDescendantsInstances = {player.Character}
@@ -1405,6 +1422,8 @@ FindCoinBtn.MouseButton1Click:Connect(function()
         end
         
         local startY = coin.Position.Y
+        
+        -- Hiệu ứng xoay và nhảy của xu
         local spinConn
         spinConn = rs.RenderStepped:Connect(function(dt)
             if not coin or not coin.Parent then 
@@ -1415,78 +1434,97 @@ FindCoinBtn.MouseButton1Click:Connect(function()
             coin.Position = Vector3.new(coin.Position.X, startY + math.sin(tick() * 3) * 1.5, coin.Position.Z)
         end)
         
-        table.insert(spawnedCoins, {
-            coin = coin,
-            spinConn = spinConn,
-            position = coin.Position
-        })
-    end
-    
-    local function checkCollectCoins()
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+        currentCoin = coin
+        currentSpinConn = spinConn
         
-        for i = #spawnedCoins, 1, -1 do
-            local data = spawnedCoins[i]
-            if data and data.coin and data.coin.Parent then
-                local dist = (hrp.Position - data.coin.Position).Magnitude
-                if dist <= collectDistance then
-                    if data.spinConn then data.spinConn:Disconnect() end
-                    
-                    local tween = tweenService:Create(data.coin, TweenInfo.new(0.5), {Transparency = 1})
-                    tween:Play()
-                    tween.Completed:Wait()
-                    data.coin:Destroy()
-                    
-                    table.remove(spawnedCoins, i)
-                    coinsCollected = coinsCollected + 1
-                    counter.Text = coinsCollected .. "/" .. maxCoins .. " xu"
-                    
-                    if coinsCollected < maxCoins then
-                        spawnCoin()
-                    else
-                        hud:Destroy()
-                        local reward = 100 * settings.Multiplier
-                        settings.Coins = settings.Coins + reward
-                        updateCoinsUI()
-                        saveVIPData()
-                        pcall(function()
-                            StarterGui:SetCore("SendNotification", {
-                                Title = "Hoàn thành",
-                                Text = "Đã nhận được " .. reward .. " 🪙",
-                                Duration = 3,
-                            })
-                        end)
-                        MainFrame.Visible = true
-                        showTab("Coins Ads")
-                        return
-                    end
-                end
-            end
-        end
+        -- Bắt đầu kiểm tra thu thập xu
+        isCollecting = true
+        checkCollectCoin()
     end
     
-    for i = 1, maxCoins do
-        spawnCoin()
-    end
-    
-    local checkConn
-    checkConn = rs.Heartbeat:Connect(function()
-        if coinsCollected >= maxCoins then
-            checkConn:Disconnect()
+    local function checkCollectCoin()
+        if not isCollecting then return end
+        if not currentCoin or not currentCoin.Parent then
+            -- Nếu xu đã bị xóa (do lỗi), spawn lại
+            spawnCoin()
             return
         end
-        checkCollectCoins()
-    end)
-    
-    createCloseX(hud, function()
-        hud:Destroy()
-        for _, data in ipairs(spawnedCoins) do
-            if data.spinConn then data.spinConn:Disconnect() end
-            if data.coin and data.coin.Parent then data.coin:Destroy() end
+        
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then
+            task.wait(0.5)
+            checkCollectCoin()
+            return
         end
-        spawnedCoins = {}
-        if checkConn then checkConn:Disconnect() end
+        
+        local dist = (hrp.Position - currentCoin.Position).Magnitude
+        
+        if dist <= collectDistance then
+            -- NHẶT XU THÀNH CÔNG
+            isCollecting = false
+            
+            -- Dừng hiệu ứng xoay
+            if currentSpinConn then 
+                currentSpinConn:Disconnect() 
+                currentSpinConn = nil
+            end
+            
+            -- Hiệu ứng biến mất
+            local tween = tweenService:Create(currentCoin, TweenInfo.new(0.5), {Transparency = 1})
+            tween:Play()
+            tween.Completed:Wait()
+            currentCoin:Destroy()
+            currentCoin = nil
+            
+            -- Cập nhật số lượng xu đã nhặt
+            coinsCollected = coinsCollected + 1
+            counter.Text = coinsCollected .. "/" .. maxCoins .. " xu"
+            
+            if coinsCollected >= maxCoins then
+                -- HOÀN THÀNH
+                hud:Destroy()
+                local reward = 100 * settings.Multiplier
+                settings.Coins = settings.Coins + reward
+                updateCoinsUI()
+                saveVIPData()
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Hoàn thành",
+                        Text = "Đã nhận được " .. reward .. " 🪙",
+                        Duration = 3,
+                    })
+                end)
+                MainFrame.Visible = true
+                showTab("Coins Ads")
+                return
+            end
+            
+            -- Spawn xu mới sau 0.5 giây
+            task.wait(0.5)
+            spawnCoin()
+            return
+        end
+        
+        -- Kiểm tra lại sau 0.1 giây
+        task.wait(0.1)
+        checkCollectCoin()
+    end
+    
+    -- Bắt đầu trò chơi với 1 xu đầu tiên
+    spawnCoin()
+    
+    -- Hàm đóng game
+    createCloseX(hud, function()
+        isCollecting = false
+        if currentSpinConn then 
+            currentSpinConn:Disconnect() 
+            currentSpinConn = nil
+        end
+        if currentCoin and currentCoin.Parent then 
+            currentCoin:Destroy() 
+            currentCoin = nil
+        end
+        hud:Destroy()
         MainFrame.Visible = true
         showTab("Coins Ads")
     end)
