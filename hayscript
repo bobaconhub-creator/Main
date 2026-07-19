@@ -346,7 +346,6 @@ TabBar.BackgroundTransparency = 1
 
 local Tabs = {}
 local UI_Buttons = {}
-local lastClaimedEventData = ""
 
 local function createTab(name, canvasHeight)
     local tabFrame = Instance.new("Frame")
@@ -375,7 +374,7 @@ createTab("Setting", 350)
 createTab("Script VIP", 450)
 createTab("Coins Ads", 400) 
 createTab("Code New", 600)
-createTab("Vòng Quay", 580)
+createTab("Daily Reward", 450)
 createTab("AFK", 400)
 createTab("Tiền", 400)
 createTab("Admin", 450)
@@ -410,7 +409,7 @@ addTabButton("Setting", 4)
 addTabButton("Script VIP", 5)
 addTabButton("Coins Ads", 6)
 addTabButton("Code New", 7)
-addTabButton("Vòng Quay", 8)
+addTabButton("Daily Reward", 8)
 addTabButton("AFK", 9) 
 addTabButton("Tiền", 10) 
 local AdminTabBtn = addTabButton("Admin", 11)
@@ -738,7 +737,7 @@ healthBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- TAB 5: SCRIPT VIP - MUA KEY
+-- TAB 5: SCRIPT VIP
 local VIP_Scroll = Tabs["Script VIP"].Scroll
 
 local TimeLabel = Instance.new("TextLabel", Tabs["Script VIP"].Frame) 
@@ -918,7 +917,7 @@ task.spawn(function()
     end
 end)
 
--- TAB 6: COINS ADS & TRÒ CHƠI TÌM XU
+-- TAB 6: COINS ADS
 local CoinsScroll = Tabs["Coins Ads"].Scroll
 
 local AdsBtn1 = Instance.new("TextButton", CoinsScroll)
@@ -1033,7 +1032,6 @@ AdsBtn1.MouseButton1Click:Connect(function()
     generateMath()
 end)
 
--- TRÒ CHƠI TÌM XU
 local FindCoinBtn = Instance.new("TextButton", CoinsScroll)
 FindCoinBtn.Size = UDim2.new(0, 180, 0, 40)
 FindCoinBtn.Position = UDim2.new(0, 210, 0, 20)
@@ -1320,7 +1318,6 @@ local function isCodeTimeValid(timeString)
     return isHourValid and isDateValid
 end
 
--- Hàm lấy text hiển thị thời gian
 local function getTimeDisplayText(timeString)
     if not timeString or timeString == "" or timeString == "0" then return "🟢 Bất kì lúc nào" end
     if timeString == "true" or timeString == "false" then return "🟢 Bất kì lúc nào" end
@@ -1369,7 +1366,7 @@ local function getTimeDisplayText(timeString)
     return table.concat(displayTexts, " | ")
 end
 
--- KHUNG NHẬP CODE/LỆNH ADMIN
+-- Code Input
 local CodeLabel = Instance.new("TextLabel", CoinsScroll)
 CodeLabel.Size = UDim2.new(0, 370, 0, 20)
 CodeLabel.Position = UDim2.new(0, 20, 0, 90) 
@@ -1404,7 +1401,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    -- LỆNH ADMIN
     local cmdMatch, val, unit = string.match(text:lower(), "^/admin%s+(%d+)([sphdy])$")
     
     if cmdMatch then
@@ -1425,7 +1421,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    -- CODE THƯỜNG
     local found = false
     for _, cd in pairs(ServerCodes) do
         if cd.code == text then
@@ -1569,222 +1564,183 @@ task.spawn(function()
     end
 end)
 
--- TAB 8: VÒNG QUAY MAY MẮN (CÓ HIỆU ỨNG XOAY TRÒN)
-local SpinScroll = Tabs["Vòng Quay"].Scroll
+-- TAB 8: DAILY REWARD (30 NGÀY - KÉO NGANG)
+local DailyScroll = Tabs["Daily Reward"].Scroll
 
 -- Xóa nội dung cũ
-for _, child in pairs(SpinScroll:GetChildren()) do
+for _, child in pairs(DailyScroll:GetChildren()) do
     child:Destroy()
 end
 
 -- Tiêu đề
-local SpinTitle = Instance.new("TextLabel", SpinScroll)
-SpinTitle.Size = UDim2.new(1, -20, 0, 35)
-SpinTitle.Position = UDim2.new(0, 10, 0, 10)
-SpinTitle.BackgroundTransparency = 1
-SpinTitle.Text = "🎰 VÒNG QUAY MAY MẮN 🎰"
-SpinTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-SpinTitle.Font = Enum.Font.GothamBold
-SpinTitle.TextSize = 18
+local DailyTitle = Instance.new("TextLabel", DailyScroll)
+DailyTitle.Size = UDim2.new(1, -20, 0, 40)
+DailyTitle.Position = UDim2.new(0, 10, 0, 10)
+DailyTitle.BackgroundTransparency = 1
+DailyTitle.Text = "🎁 DAILY REWARD (30 DAYS) 🎁"
+DailyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+DailyTitle.Font = Enum.Font.GothamBold
+DailyTitle.TextSize = 18
 
--- Frame vòng quay
-local WheelContainer = Instance.new("Frame", SpinScroll)
-WheelContainer.Size = UDim2.new(0, 220, 0, 220)
-WheelContainer.Position = UDim2.new(0.5, -110, 0, 50)
-WheelContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-WheelContainer.BackgroundTransparency = 0
-Instance.new("UICorner", WheelContainer).CornerRadius = UDim.new(1, 0)
+-- Frame hiển thị thông tin
+local InfoFrame = Instance.new("Frame", DailyScroll)
+InfoFrame.Size = UDim2.new(1, -20, 0, 150)
+InfoFrame.Position = UDim2.new(0, 10, 0, 55)
+InfoFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+InfoFrame.BackgroundTransparency = 0.5
+Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 10)
 
--- Vòng quay chính (sẽ xoay)
-local Wheel = Instance.new("Frame", WheelContainer)
-Wheel.Size = UDim2.new(0, 200, 0, 200)
-Wheel.Position = UDim2.new(0.5, -100, 0.5, -100)
-Wheel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-Wheel.BackgroundTransparency = 0
-Instance.new("UICorner", Wheel).CornerRadius = UDim.new(1, 0)
+-- Label ngày hiện tại
+local DayLabel = Instance.new("TextLabel", InfoFrame)
+DayLabel.Size = UDim2.new(1, 0, 0, 30)
+DayLabel.Position = UDim2.new(0, 0, 0, 5)
+DayLabel.BackgroundTransparency = 1
+DayLabel.Text = "📅 Day: 1 / 30"
+DayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+DayLabel.Font = Enum.Font.GothamBold
+DayLabel.TextSize = 17
 
--- Tạo các ô phần thưởng trên vòng quay
-local wheelSegments = {}
-local segmentColors = {
-    Color3.fromRGB(255, 50, 50),
-    Color3.fromRGB(255, 150, 50),
-    Color3.fromRGB(255, 215, 0),
-    Color3.fromRGB(50, 200, 50),
-    Color3.fromRGB(50, 150, 255),
-    Color3.fromRGB(150, 50, 255),
-    Color3.fromRGB(255, 50, 150),
-    Color3.fromRGB(50, 200, 200),
-}
+-- Label phần thưởng
+local RewardLabel = Instance.new("TextLabel", InfoFrame)
+RewardLabel.Size = UDim2.new(1, 0, 0, 30)
+RewardLabel.Position = UDim2.new(0, 0, 0, 40)
+RewardLabel.BackgroundTransparency = 1
+RewardLabel.Text = "🎁 Reward: 0 🪙"
+RewardLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+RewardLabel.Font = Enum.Font.GothamBold
+RewardLabel.TextSize = 17
 
-local function createWheelSegments(rewards)
-    for _, seg in pairs(wheelSegments) do
-        if seg and seg.Parent then
-            seg:Destroy()
-        end
-    end
-    wheelSegments = {}
-    
-    local count = #rewards
-    if count == 0 then
-        rewards = {
-            {percent = 50, coins = 400},
-            {percent = 20, coins = 800},
-            {percent = 15, coins = 1000},
-            {percent = 10, coins = 1200},
-            {percent = 4, coins = 1800},
-            {percent = 0.5, coins = 2222},
-            {percent = 0.5, coins = 3000},
-        }
-        count = #rewards
-    end
-    
-    local angleStep = 360 / count
-    
-    for i, reward in ipairs(rewards) do
-        local startAngle = (i - 1) * angleStep
-        local segment = Instance.new("Frame", Wheel)
-        segment.Size = UDim2.new(1, 0, 1, 0)
-        segment.BackgroundColor3 = segmentColors[(i % #segmentColors) + 1]
-        segment.BackgroundTransparency = 0.3
-        segment.Rotation = startAngle + angleStep / 2
-        
-        local slice = Instance.new("Frame", segment)
-        slice.Size = UDim2.new(0.5, 0, 1, 0)
-        slice.Position = UDim2.new(0.5, 0, 0, 0)
-        slice.BackgroundColor3 = segment.BackgroundColor3
-        slice.BackgroundTransparency = 0
-        
-        local label = Instance.new("TextLabel", segment)
-        label.Size = UDim2.new(0, 40, 0, 20)
-        label.Position = UDim2.new(0.5, -20, 0.3, 0)
-        label.BackgroundTransparency = 1
-        label.Text = formatCoins(reward.coins)
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 10
-        label.Rotation = -segment.Rotation
-        
-        table.insert(wheelSegments, segment)
-    end
+-- Label trạng thái
+local StatusLabel = Instance.new("TextLabel", InfoFrame)
+StatusLabel.Size = UDim2.new(1, 0, 0, 30)
+StatusLabel.Position = UDim2.new(0, 0, 0, 75)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "✅ Ready to claim!"
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.TextSize = 14
+
+-- Label streak
+local StreakLabel = Instance.new("TextLabel", InfoFrame)
+StreakLabel.Size = UDim2.new(1, 0, 0, 25)
+StreakLabel.Position = UDim2.new(0, 0, 0, 108)
+StreakLabel.BackgroundTransparency = 1
+StreakLabel.Text = "🔥 Streak: 0 / 30 days"
+StreakLabel.TextColor3 = Color3.fromRGB(255, 150, 0)
+StreakLabel.Font = Enum.Font.GothamBold
+StreakLabel.TextSize = 13
+
+-- Label thời gian reset
+local ResetLabel = Instance.new("TextLabel", InfoFrame)
+ResetLabel.Size = UDim2.new(1, 0, 0, 20)
+ResetLabel.Position = UDim2.new(0, 0, 0, 133)
+ResetLabel.BackgroundTransparency = 1
+ResetLabel.Text = "⏰ Reset at 00:00"
+ResetLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+ResetLabel.Font = Enum.Font.Gotham
+ResetLabel.TextSize = 11
+
+-- Nút nhận quà
+local ClaimBtn = Instance.new("TextButton", DailyScroll)
+ClaimBtn.Size = UDim2.new(0, 200, 0, 45)
+ClaimBtn.Position = UDim2.new(0.5, -100, 0, 220)
+ClaimBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+ClaimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClaimBtn.Text = "🎁 CLAIM REWARD"
+ClaimBtn.Font = Enum.Font.GothamBold
+ClaimBtn.TextSize = 16
+Instance.new("UICorner", ClaimBtn).CornerRadius = UDim.new(0, 12)
+
+-- Label Coins
+local CoinsDailyLabel = Instance.new("TextLabel", DailyScroll)
+CoinsDailyLabel.Size = UDim2.new(1, -20, 0, 25)
+CoinsDailyLabel.Position = UDim2.new(0, 10, 0, 280)
+CoinsDailyLabel.BackgroundTransparency = 1
+CoinsDailyLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
+CoinsDailyLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
+CoinsDailyLabel.Font = Enum.Font.GothamBold
+CoinsDailyLabel.TextSize = 13
+
+-- Frame danh sách 30 ngày (kéo ngang)
+local ListFrame = Instance.new("Frame", DailyScroll)
+ListFrame.Size = UDim2.new(1, -20, 0, 100)
+ListFrame.Position = UDim2.new(0, 10, 0, 320)
+ListFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ListFrame.BackgroundTransparency = 0.5
+Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0, 10)
+
+local ListTitle = Instance.new("TextLabel", ListFrame)
+ListTitle.Size = UDim2.new(1, 0, 0, 22)
+ListTitle.Position = UDim2.new(0, 0, 0, 3)
+ListTitle.BackgroundTransparency = 1
+ListTitle.Text = "📊 30 DAYS REWARDS (Scroll horizontally)"
+ListTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+ListTitle.Font = Enum.Font.GothamBold
+ListTitle.TextSize = 11
+
+-- ScrollingFrame kéo ngang
+local HorizontalScroll = Instance.new("ScrollingFrame", ListFrame)
+HorizontalScroll.Size = UDim2.new(1, -10, 1, -30)
+HorizontalScroll.Position = UDim2.new(0, 5, 0, 25)
+HorizontalScroll.BackgroundTransparency = 1
+HorizontalScroll.ScrollBarThickness = 6
+HorizontalScroll.CanvasSize = UDim2.new(0, 800, 0, 0)
+HorizontalScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 215, 0)
+
+-- Layout cho danh sách ngang
+local HorizontalList = Instance.new("UIListLayout", HorizontalScroll)
+HorizontalList.FillDirection = Enum.FillDirection.Horizontal
+HorizontalList.Padding = UDim.new(0, 5)
+HorizontalList.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Biến
+local Rewards = {}
+local rewardItems = {}
+local lastClaimDate = ""
+local currentStreak = 0
+local isClaiming = false
+
+-- Hàm lấy ngày hiện tại
+local function getToday()
+    local now = os.date("*t")
+    return string.format("%d-%d-%d", now.day, now.month, now.year)
 end
 
--- Kim chỉ
-local Pointer = Instance.new("Frame", WheelContainer)
-Pointer.Size = UDim2.new(0, 20, 0, 30)
-Pointer.Position = UDim2.new(0.5, -10, 0, -15)
-Pointer.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-Pointer.BackgroundTransparency = 0
-Pointer.ZIndex = 2
-Instance.new("UICorner", Pointer).CornerRadius = UDim.new(0, 10)
-
-local pointerTriangle = Instance.new("Frame", Pointer)
-pointerTriangle.Size = UDim2.new(0, 20, 0, 15)
-pointerTriangle.Position = UDim2.new(0, 0, 1, -15)
-pointerTriangle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-pointerTriangle.BackgroundTransparency = 0
-pointerTriangle.Rotation = 180
-Instance.new("UICorner", pointerTriangle).CornerRadius = UDim.new(0, 10)
-
--- Label kết quả
-local ResultLabel = Instance.new("TextLabel", WheelContainer)
-ResultLabel.Size = UDim2.new(0, 100, 0, 40)
-ResultLabel.Position = UDim2.new(0.5, -50, 0.5, -20)
-ResultLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ResultLabel.BackgroundTransparency = 0.5
-ResultLabel.Text = "🎰 QUAY"
-ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-ResultLabel.Font = Enum.Font.GothamBold
-ResultLabel.TextSize = 14
-ResultLabel.TextScaled = true
-ResultLabel.ZIndex = 3
-Instance.new("UICorner", ResultLabel).CornerRadius = UDim.new(0, 10)
-
--- Nút quay
-local SpinBtn = Instance.new("TextButton", SpinScroll)
-SpinBtn.Size = UDim2.new(0, 200, 0, 45)
-SpinBtn.Position = UDim2.new(0.5, -100, 0, 285)
-SpinBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-SpinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpinBtn.Text = "🎰 QUAY NGAY (500 💸)"
-SpinBtn.Font = Enum.Font.GothamBold
-SpinBtn.TextSize = 16
-Instance.new("UICorner", SpinBtn).CornerRadius = UDim.new(0, 10)
-
--- Frame bảng phần thưởng
-local RewardTableFrame = Instance.new("Frame", SpinScroll)
-RewardTableFrame.Size = UDim2.new(1, -20, 0, 150)
-RewardTableFrame.Position = UDim2.new(0, 10, 0, 345)
-RewardTableFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-RewardTableFrame.BackgroundTransparency = 0.5
-Instance.new("UICorner", RewardTableFrame).CornerRadius = UDim.new(0, 10)
-
-local TableTitle = Instance.new("TextLabel", RewardTableFrame)
-TableTitle.Size = UDim2.new(1, 0, 0, 25)
-TableTitle.Position = UDim2.new(0, 0, 0, 5)
-TableTitle.BackgroundTransparency = 1
-TableTitle.Text = "📊 BẢNG PHẦN THƯỞNG"
-TableTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-TableTitle.Font = Enum.Font.GothamBold
-TableTitle.TextSize = 13
-
-local RewardScroll = Instance.new("ScrollingFrame", RewardTableFrame)
-RewardScroll.Size = UDim2.new(1, 0, 1, -35)
-RewardScroll.Position = UDim2.new(0, 0, 0, 30)
-RewardScroll.BackgroundTransparency = 1
-RewardScroll.ScrollBarThickness = 4
-RewardScroll.CanvasSize = UDim2.new(0, 0, 0, 200)
-
-local RewardList = Instance.new("UIListLayout", RewardScroll)
-RewardList.Padding = UDim.new(0, 2)
-RewardList.SortOrder = Enum.SortOrder.LayoutOrder
-
-local InfoLabel = Instance.new("TextLabel", SpinScroll)
-InfoLabel.Size = UDim2.new(1, -20, 0, 20)
-InfoLabel.Position = UDim2.new(0, 10, 0, 505)
-InfoLabel.BackgroundTransparency = 1
-InfoLabel.Text = "💡 Mỗi lần quay tốn 500 Coins. Phần thưởng được nhân với Số X!"
-InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-InfoLabel.Font = Enum.Font.Gotham
-InfoLabel.TextSize = 10
-
-local CoinsSpinLabel = Instance.new("TextLabel", SpinScroll)
-CoinsSpinLabel.Size = UDim2.new(1, -20, 0, 20)
-CoinsSpinLabel.Position = UDim2.new(0, 10, 0, 528)
-CoinsSpinLabel.BackgroundTransparency = 1
-CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
-CoinsSpinLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
-CoinsSpinLabel.Font = Enum.Font.GothamBold
-CoinsSpinLabel.TextSize = 12
-
-local Rewards = {}
-local isSpinning = false
-local rewardItems = {}
-local spinTween = nil
-
+-- Hàm tải phần thưởng từ link dayli
 local function loadRewards()
     pcall(function()
-        local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/phanthuong")
+        local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/dayli")
         Rewards = {}
         
         for line in res:gmatch("[^\r\n]+") do
             local split = string.split(line, ":")
             if #split == 2 then
-                local percent = tonumber(split[1]:gsub("%%", "")) or 0
-                local coins = tonumber(split[2]) or 0
-                table.insert(Rewards, {
-                    percent = percent,
-                    coins = coins
-                })
+                local coins = tonumber(split[1]) or 0
+                local day = tonumber(split[2]) or 0
+                if day >= 1 and day <= 30 then
+                    table.insert(Rewards, {
+                        day = day,
+                        coins = coins
+                    })
+                end
             end
         end
         
-        table.sort(Rewards, function(a, b) return a.percent > b.percent end)
-        createWheelSegments(Rewards)
-        updateRewardTable()
+        -- Nếu không có dữ liệu từ link, dùng mặc định
+        if #Rewards == 0 then
+            for day = 1, 30 do
+                table.insert(Rewards, {day = day, coins = day * 250})
+            end
+        end
+        
+        table.sort(Rewards, function(a, b) return a.day < b.day end)
+        updateRewardList()
+        updateUI()
     end)
 end
 
-local function updateRewardTable()
+-- Cập nhật danh sách 30 ngày
+local function updateRewardList()
     for _, item in pairs(rewardItems) do
         if item and item.Parent then
             item:Destroy()
@@ -1792,147 +1748,194 @@ local function updateRewardTable()
     end
     rewardItems = {}
     
+    local totalWidth = #Rewards * 70 + 10
+    HorizontalScroll.CanvasSize = UDim2.new(0, totalWidth, 0, 0)
+    
     for _, reward in ipairs(Rewards) do
-        local item = Instance.new("TextLabel", RewardScroll)
-        item.Size = UDim2.new(1, 0, 0, 25)
-        item.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        item.TextColor3 = Color3.fromRGB(255, 255, 255)
-        item.Font = Enum.Font.GothamBold
-        item.TextSize = 11
-        Instance.new("UICorner", item).CornerRadius = UDim.new(0, 4)
+        local item = Instance.new("Frame", HorizontalScroll)
+        item.Size = UDim2.new(0, 60, 1, -10)
+        item.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
         
-        local barWidth = reward.percent / 50 * 100
-        item.Text = string.format("🎯 %s%%  →  %s 🪙", reward.percent, formatCoins(reward.coins))
-        item.TextXAlignment = Enum.TextXAlignment.Left
-        item.TextColor3 = reward.percent <= 1 and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(255, 255, 255)
+        local isUnlocked = reward.day <= currentStreak
+        local isNext = reward.day == currentStreak + 1
         
-        local bar = Instance.new("Frame", item)
-        bar.Size = UDim2.new(math.min(barWidth / 100, 1), -10, 1, -4)
-        bar.Position = UDim2.new(0, 0, 0, 2)
-        bar.BackgroundColor3 = reward.percent <= 1 and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(0, 200, 100)
-        bar.BackgroundTransparency = 0.5
-        Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 2)
+        local color = Color3.fromRGB(150, 150, 150)
+        if isUnlocked then
+            color = Color3.fromRGB(0, 200, 0)
+        elseif isNext then
+            color = Color3.fromRGB(255, 215, 0)
+        else
+            color = Color3.fromRGB(80, 80, 80)
+        end
+        item.BackgroundColor3 = color
+        item.BackgroundTransparency = 0.3
+        
+        local dayLabel = Instance.new("TextLabel", item)
+        dayLabel.Size = UDim2.new(1, 0, 0, 20)
+        dayLabel.Position = UDim2.new(0, 0, 0, 2)
+        dayLabel.BackgroundTransparency = 1
+        dayLabel.Text = "Day " .. reward.day
+        dayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        dayLabel.Font = Enum.Font.GothamBold
+        dayLabel.TextSize = 10
+        
+        local coinLabel = Instance.new("TextLabel", item)
+        coinLabel.Size = UDim2.new(1, 0, 0, 20)
+        coinLabel.Position = UDim2.new(0, 0, 0, 25)
+        coinLabel.BackgroundTransparency = 1
+        coinLabel.Text = formatCoins(reward.coins) .. "🪙"
+        coinLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+        coinLabel.Font = Enum.Font.Gotham
+        coinLabel.TextSize = 9
+        
+        local iconLabel = Instance.new("TextLabel", item)
+        iconLabel.Size = UDim2.new(1, 0, 0, 18)
+        iconLabel.Position = UDim2.new(0, 0, 0, 48)
+        iconLabel.BackgroundTransparency = 1
+        iconLabel.Text = isUnlocked and "✅" or (isNext and "👉" or "🔒")
+        iconLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        iconLabel.Font = Enum.Font.Gotham
+        iconLabel.TextSize = 12
         
         table.insert(rewardItems, item)
     end
-    
-    RewardScroll.CanvasSize = UDim2.new(0, 0, 0, #Rewards * 27 + 10)
 end
 
-local function spinWheel()
-    if isSpinning then return end
-    if #Rewards == 0 then
-        showNoCoinsAlert("❌ Đang tải dữ liệu phần thưởng!")
-        return
+-- Cập nhật UI
+local function updateUI()
+    local today = getToday()
+    local nextDay = currentStreak + 1
+    
+    -- Kiểm tra nếu đã qua 00:00 và chưa claim
+    if lastClaimDate ~= today and lastClaimDate ~= "" then
+        local yesterday = os.date("*t", os.time() - 86400)
+        local yesterdayStr = string.format("%d-%d-%d", yesterday.day, yesterday.month, yesterday.year)
+        if lastClaimDate ~= yesterdayStr then
+            currentStreak = 0
+        end
     end
-    if settings.Coins < 500 then
-        showNoCoinsAlert("❌ Bạn không đủ 500 Coins để quay!")
-        return
-    end
     
-    isSpinning = true
-    SpinBtn.Text = "🔄 ĐANG QUAY..."
-    SpinBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    SpinBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    SpinBtn.Visible = false
-    
-    settings.Coins = settings.Coins - 500
-    updateCoinsUI()
-    saveVIPData()
-    CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
-    
-    Wheel.Rotation = 0
-    
-    local totalPercent = 0
-    local rand = math.random(1, 10000) / 100
-    local selectedReward = nil
-    local selectedIndex = 1
-    
-    for i, reward in ipairs(Rewards) do
-        totalPercent = totalPercent + reward.percent
-        if rand <= totalPercent then
-            selectedReward = reward
-            selectedIndex = i
+    -- Tìm phần thưởng tiếp theo
+    local nextReward = nil
+    for _, reward in ipairs(Rewards) do
+        if reward.day == nextDay then
+            nextReward = reward
             break
         end
     end
     
-    if not selectedReward then
-        selectedReward = Rewards[#Rewards]
-        selectedIndex = #Rewards
+    if nextReward and nextDay <= 30 then
+        DayLabel.Text = "📅 Day: " .. nextDay .. " / 30"
+        RewardLabel.Text = "🎁 Reward: " .. formatCoins(nextReward.coins) .. " 🪙"
+    elseif currentStreak >= 30 then
+        DayLabel.Text = "🎉 ALL COMPLETED!"
+        RewardLabel.Text = "🎁 Max reward achieved!"
+    else
+        DayLabel.Text = "📅 Day: " .. nextDay .. " / 30"
+        RewardLabel.Text = "🎁 Reward: 0 🪙"
     end
     
-    local segmentAngle = 360 / #Rewards
-    local targetAngle = (selectedIndex - 1) * segmentAngle + segmentAngle / 2
-    local extraSpins = 5 + math.random(3, 8)
-    local totalRotation = extraSpins * 360 + (360 - targetAngle) + math.random(-5, 5)
+    StreakLabel.Text = "🔥 Streak: " .. currentStreak .. " / 30 days"
     
-    local startTime = tick()
-    local duration = 3 + math.random(1, 2)
-    local startRotation = 0
+    if lastClaimDate == today then
+        ClaimBtn.Text = "✅ CLAIMED TODAY"
+        ClaimBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        ClaimBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+        StatusLabel.Text = "⏳ Come back at 00:00!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+    elseif currentStreak >= 30 then
+        ClaimBtn.Text = "🎉 ALL DONE!"
+        ClaimBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        ClaimBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+        StatusLabel.Text = "🎊 You completed all 30 days!"
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        ClaimBtn.Text = "🎁 CLAIM REWARD"
+        ClaimBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+        ClaimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        StatusLabel.Text = "✅ Ready to claim!"
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    end
     
-    spinTween = game:GetService("RunService").RenderStepped:Connect(function()
-        local elapsed = tick() - startTime
-        local progress = math.min(elapsed / duration, 1)
-        local easeOut = 1 - (1 - progress) * (1 - progress)
-        local currentRotation = totalRotation * easeOut
-        
-        Wheel.Rotation = currentRotation
-        
-        if progress < 1 then
-            local randomReward = Rewards[math.random(1, #Rewards)]
-            ResultLabel.Text = "🎰 " .. randomReward.coins
-            ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-            WheelContainer.BackgroundColor3 = Color3.fromRGB(
-                math.random(50, 200),
-                math.random(50, 200),
-                math.random(50, 200)
-            )
-        else
-            spinTween:Disconnect()
-            
-            local gain = selectedReward.coins * settings.Multiplier
-            settings.Coins = settings.Coins + gain
-            updateCoinsUI()
-            saveVIPData()
-            CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
-            
-            ResultLabel.Text = "🎉 +" .. gain .. " 🪙"
-            ResultLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-            WheelContainer.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-            
-            pcall(function()
-                StarterGui:SetCore("SendNotification", {
-                    Title = "🎉 Chúc mừng!",
-                    Text = "Bạn nhận được " .. gain .. " Coins! (X"..settings.Multiplier..")",
-                    Duration = 3,
-                })
-            end)
-            
-            task.wait(1.5)
-            
-            SpinBtn.Visible = true
-            SpinBtn.Text = "🎰 QUAY NGAY (500 💸)"
-            SpinBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-            SpinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            WheelContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            ResultLabel.Text = "🎰 QUAY"
-            ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            isSpinning = false
+    CoinsDailyLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
+end
+
+-- Hàm nhận quà
+local function claimReward()
+    if isClaiming then return end
+    
+    local today = getToday()
+    
+    if lastClaimDate == today then
+        showNoCoinsAlert("❌ You already claimed today's reward!\nCome back at 00:00!")
+        return
+    end
+    
+    if currentStreak >= 30 then
+        showNoCoinsAlert("🎉 You completed all 30 days!\nGreat job!")
+        return
+    end
+    
+    local yesterday = os.date("*t", os.time() - 86400)
+    local yesterdayStr = string.format("%d-%d-%d", yesterday.day, yesterday.month, yesterday.year)
+    if lastClaimDate ~= "" and lastClaimDate ~= yesterdayStr then
+        currentStreak = 0
+        updateRewardList()
+    end
+    
+    local nextDay = currentStreak + 1
+    local nextReward = nil
+    for _, reward in ipairs(Rewards) do
+        if reward.day == nextDay then
+            nextReward = reward
+            break
         end
+    end
+    
+    if not nextReward then
+        showNoCoinsAlert("❌ No reward available!")
+        return
+    end
+    
+    isClaiming = true
+    ClaimBtn.Text = "🔄 CLAIMING..."
+    ClaimBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    ClaimBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    
+    lastClaimDate = today
+    currentStreak = currentStreak + 1
+    
+    local gain = nextReward.coins * settings.Multiplier
+    settings.Coins = settings.Coins + gain
+    updateCoinsUI()
+    saveVIPData()
+    
+    StatusLabel.Text = "🎉 +" .. gain .. " Coins!"
+    StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "🎉 Daily Reward!",
+            Text = "Day " .. nextDay .. ": +" .. gain .. " Coins! (X"..settings.Multiplier..")",
+            Duration = 3,
+        })
     end)
+    
+    task.wait(0.5)
+    
+    updateRewardList()
+    updateUI()
+    
+    isClaiming = false
 end
 
-SpinBtn.MouseButton1Click:Connect(spinWheel)
-
-local function updateSpinUI()
-    CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
-end
+ClaimBtn.MouseButton1Click:Connect(claimReward)
 
 task.spawn(function()
     while true do
         task.wait(1)
-        updateSpinUI()
+        updateUI()
     end
 end)
 
@@ -1942,6 +1945,35 @@ task.spawn(function()
     while true do
         task.wait(60)
         loadRewards()
+    end
+end)
+
+local function saveStreakData()
+    pcall(function()
+        if writefile then
+            local data = {
+                lastClaimDate = lastClaimDate,
+                currentStreak = currentStreak
+            }
+            writefile("daily_streak.json", httpService:JSONEncode(data))
+        end
+    end)
+end
+
+pcall(function()
+    if isfile("daily_streak.json") then
+        local data = httpService:JSONDecode(readfile("daily_streak.json"))
+        if data then
+            lastClaimDate = data.lastClaimDate or ""
+            currentStreak = data.currentStreak or 0
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(5)
+        saveStreakData()
     end
 end)
 
@@ -2022,7 +2054,7 @@ task.spawn(function()
     end
 end)
 
--- TAB 10: TIỀN - BOOST
+-- TAB 10: TIỀN
 local MoneyScroll = Tabs["Tiền"].Scroll
 
 local ShopTitle = Instance.new("TextLabel", MoneyScroll)
@@ -2146,7 +2178,7 @@ GuideLabel.Font = Enum.Font.Gotham
 GuideLabel.TextSize = 11
 GuideLabel.TextWrapped = true
 
--- TAB 11: ADMIN PANEL
+-- TAB 11: ADMIN
 local AdminScroll = Tabs["Admin"].Scroll
 
 local AdminTitle = Instance.new("TextLabel", AdminScroll)
