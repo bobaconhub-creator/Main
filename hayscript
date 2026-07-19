@@ -760,6 +760,7 @@ BuyKeyFrame.Size = UDim2.new(1, -20, 0, 220)
 BuyKeyFrame.Position = UDim2.new(0, 10, 0, 35)
 BuyKeyFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 BuyKeyFrame.BackgroundTransparency = 0.3
+BuyKeyFrame.Visible = true
 Instance.new("UICorner", BuyKeyFrame).CornerRadius = UDim.new(0, 10)
 
 -- Tiêu đề
@@ -885,10 +886,8 @@ local function buyKeyWithCoins(coins)
     local timeSeconds = hours * 3600
     
     if settings.Coins >= coins then
-        -- Trừ xu
         settings.Coins = settings.Coins - coins
         
-        -- Cộng thời gian VIP (cộng dồn)
         if settings.VIP_Status.IsUnlocked then
             settings.VIP_Status.TimeRemaining = settings.VIP_Status.TimeRemaining + timeSeconds
         else
@@ -898,16 +897,13 @@ local function buyKeyWithCoins(coins)
         end
         settings.VIP_Status.LastSavedTime = os.time()
         
-        -- Lưu và cập nhật
         updateCoinsUI()
         saveVIPData()
         updateVipTimerUI()
         updateBuyKeyUI()
         
-        -- Thông báo thành công
         showNoCoinsAlert("✅ Mua thành công!\n⏰ +" .. formatHPS(timeSeconds) .. " VIP\n💸 -" .. formatCoins(coins) .. " Coins")
         
-        -- Xóa ô nhập
         CoinInput.Text = ""
         ResultLabel.Text = "✅ Đã mua thành công! Bạn nhận được " .. formatHPS(timeSeconds) .. " VIP"
         ResultLabel.TextColor3 = Color3.fromRGB(0, 150, 0)
@@ -916,13 +912,11 @@ local function buyKeyWithCoins(coins)
     end
 end
 
--- Sự kiện nút Mua
 BuyBtn.MouseButton1Click:Connect(function()
     local amount = tonumber(CoinInput.Text)
     buyKeyWithCoins(amount)
 end)
 
--- Cho phép nhấn Enter để mua
 CoinInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         local amount = tonumber(CoinInput.Text)
@@ -1072,6 +1066,7 @@ FindCoinBtn.MouseButton1Click:Connect(function()
     local maxCoins = 10
     local collectDistance = 5
     local spawnRadius = 100
+    local isGameEnded = false
     
     local hud = Instance.new("ScreenGui", game.CoreGui)
     local counter = Instance.new("TextLabel", hud)
@@ -1090,7 +1085,26 @@ FindCoinBtn.MouseButton1Click:Connect(function()
     local checkConn = nil
     local isGameActive = true
     
+    local function clearAllCoins()
+        if currentCoin and currentCoin.Parent then
+            if currentSpinConn then 
+                currentSpinConn:Disconnect() 
+                currentSpinConn = nil
+            end
+            currentCoin:Destroy()
+            currentCoin = nil
+        end
+        
+        for _, coin in pairs(workspace:GetChildren()) do
+            if coin.Name == "Hayhub_Coin" then
+                coin:Destroy()
+            end
+        end
+    end
+    
     local function spawnCoin()
+        if isGameEnded then return end
+        
         if currentCoin and currentCoin.Parent then
             if currentSpinConn then 
                 currentSpinConn:Disconnect() 
@@ -1103,7 +1117,7 @@ FindCoinBtn.MouseButton1Click:Connect(function()
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if not hrp then 
             task.wait(0.5)
-            if isGameActive then spawnCoin() end
+            if isGameActive and not isGameEnded then spawnCoin() end
             return 
         end
         
@@ -1148,7 +1162,7 @@ FindCoinBtn.MouseButton1Click:Connect(function()
     end
     
     local function checkCollectCoin()
-        if not isGameActive then return end
+        if not isGameActive or isGameEnded then return end
         if not currentCoin or not currentCoin.Parent then
             spawnCoin()
             return
@@ -1177,8 +1191,12 @@ FindCoinBtn.MouseButton1Click:Connect(function()
             counter.Text = coinsCollected .. "/" .. maxCoins .. " xu"
             
             if coinsCollected >= maxCoins then
+                isGameEnded = true
                 isGameActive = false
                 if checkConn then checkConn:Disconnect() end
+                
+                clearAllCoins()
+                
                 hud:Destroy()
                 local reward = 100 * settings.Multiplier
                 settings.Coins = settings.Coins + reward
@@ -1197,7 +1215,7 @@ FindCoinBtn.MouseButton1Click:Connect(function()
             end
             
             task.wait(0.3)
-            if isGameActive then
+            if isGameActive and not isGameEnded then
                 spawnCoin()
             end
         end
@@ -1210,6 +1228,7 @@ FindCoinBtn.MouseButton1Click:Connect(function()
     end)
     
     createCloseX(hud, function()
+        isGameEnded = true
         isGameActive = false
         if checkConn then 
             checkConn:Disconnect() 
@@ -1223,6 +1242,7 @@ FindCoinBtn.MouseButton1Click:Connect(function()
             currentCoin:Destroy() 
             currentCoin = nil
         end
+        clearAllCoins()
         hud:Destroy()
         MainFrame.Visible = true
         showTab("Coins Ads")
@@ -1399,7 +1419,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    -- LỆNH ADMIN: /admin 10s hoặc /admin 5p hoặc /admin 2h
     local cmdMatch, val, unit = string.match(text, "^/admin%s+(%d+)%s*([sphdy])$")
     if cmdMatch then
         local multiplier = {s=1, p=60, h=3600, d=86400, y=31536000}
@@ -1419,7 +1438,6 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    -- CODE THƯỜNG
     local found = false
     for _, cd in pairs(ServerCodes) do
         if cd.code == text then
@@ -1783,7 +1801,6 @@ BoostLabel.Font = Enum.Font.GothamBold
 BoostLabel.TextSize = 12
 BoostLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Biến lưu trạng thái đã mua boost
 local BoostPurchased = {
     [2] = false,
     [4] = false,
@@ -1792,7 +1809,6 @@ local BoostPurchased = {
     [32] = false
 }
 
--- Hàm tạo nút Boost
 local function createBoostButton(text, mult, price, x, y)
     local btn = Instance.new("TextButton", MoneyScroll)
     btn.Size = UDim2.new(0, 130, 0, 45)
@@ -1803,7 +1819,6 @@ local function createBoostButton(text, mult, price, x, y)
     btn.TextSize = 11
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     
-    -- Kiểm tra nếu đã mua
     if settings.Multiplier >= mult then
         btn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
         btn.Text = "✅ Đã sở hữu X" .. mult
@@ -1852,14 +1867,12 @@ local function createBoostButton(text, mult, price, x, y)
     return btn
 end
 
--- Tạo các nút Boost
 createBoostButton("⚡ Boost", 2, 5000, 20, 135)
 createBoostButton("⚡ Boost", 4, 20000, 165, 135)
 createBoostButton("⚡ Boost", 8, 500000, 20, 190)
 createBoostButton("⚡ Boost", 16, 2000000, 165, 190)
 createBoostButton("⚡ Boost", 32, 20000000, 92, 245)
 
--- Label hướng dẫn
 local GuideLabel = Instance.new("TextLabel", MoneyScroll)
 GuideLabel.Size = UDim2.new(1, -40, 0, 40)
 GuideLabel.Position = UDim2.new(0, 20, 0, 300)
