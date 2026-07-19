@@ -375,7 +375,7 @@ createTab("Setting", 350)
 createTab("Script VIP", 450)
 createTab("Coins Ads", 400) 
 createTab("Code New", 600)
-createTab("Sự Kiện", 450) -- Vòng Quay May Mắn
+createTab("Vòng Quay", 580)
 createTab("AFK", 400)
 createTab("Tiền", 400)
 createTab("Admin", 450)
@@ -1404,7 +1404,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
-    -- SỬA LỖI LỆNH ADMIN: /admin 10s hoặc /admin 5p hoặc /admin 2h
+    -- LỆNH ADMIN
     local cmdMatch, val, unit = string.match(text:lower(), "^/admin%s+(%d+)([sphdy])$")
     
     if cmdMatch then
@@ -1569,8 +1569,8 @@ task.spawn(function()
     end
 end)
 
--- TAB 8: VÒNG QUAY MAY MẮN
-local SpinScroll = Tabs["Sự Kiện"].Scroll
+-- TAB 8: VÒNG QUAY MAY MẮN (CÓ HIỆU ỨNG XOAY TRÒN)
+local SpinScroll = Tabs["Vòng Quay"].Scroll
 
 -- Xóa nội dung cũ
 for _, child in pairs(SpinScroll:GetChildren()) do
@@ -1587,71 +1587,180 @@ SpinTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 SpinTitle.Font = Enum.Font.GothamBold
 SpinTitle.TextSize = 18
 
--- Frame hiển thị phần thưởng
-local RewardFrame = Instance.new("Frame", SpinScroll)
-RewardFrame.Size = UDim2.new(1, -20, 0, 200)
-RewardFrame.Position = UDim2.new(0, 10, 0, 55)
-RewardFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-RewardFrame.BackgroundTransparency = 0.5
-Instance.new("UICorner", RewardFrame).CornerRadius = UDim.new(0, 10)
+-- Frame vòng quay
+local WheelContainer = Instance.new("Frame", SpinScroll)
+WheelContainer.Size = UDim2.new(0, 220, 0, 220)
+WheelContainer.Position = UDim2.new(0.5, -110, 0, 50)
+WheelContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+WheelContainer.BackgroundTransparency = 0
+Instance.new("UICorner", WheelContainer).CornerRadius = UDim.new(1, 0)
+
+-- Vòng quay chính (sẽ xoay)
+local Wheel = Instance.new("Frame", WheelContainer)
+Wheel.Size = UDim2.new(0, 200, 0, 200)
+Wheel.Position = UDim2.new(0.5, -100, 0.5, -100)
+Wheel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+Wheel.BackgroundTransparency = 0
+Instance.new("UICorner", Wheel).CornerRadius = UDim.new(1, 0)
+
+-- Tạo các ô phần thưởng trên vòng quay
+local wheelSegments = {}
+local segmentColors = {
+    Color3.fromRGB(255, 50, 50),
+    Color3.fromRGB(255, 150, 50),
+    Color3.fromRGB(255, 215, 0),
+    Color3.fromRGB(50, 200, 50),
+    Color3.fromRGB(50, 150, 255),
+    Color3.fromRGB(150, 50, 255),
+    Color3.fromRGB(255, 50, 150),
+    Color3.fromRGB(50, 200, 200),
+}
+
+local function createWheelSegments(rewards)
+    for _, seg in pairs(wheelSegments) do
+        if seg and seg.Parent then
+            seg:Destroy()
+        end
+    end
+    wheelSegments = {}
+    
+    local count = #rewards
+    if count == 0 then
+        rewards = {
+            {percent = 50, coins = 400},
+            {percent = 20, coins = 800},
+            {percent = 15, coins = 1000},
+            {percent = 10, coins = 1200},
+            {percent = 4, coins = 1800},
+            {percent = 0.5, coins = 2222},
+            {percent = 0.5, coins = 3000},
+        }
+        count = #rewards
+    end
+    
+    local angleStep = 360 / count
+    
+    for i, reward in ipairs(rewards) do
+        local startAngle = (i - 1) * angleStep
+        local segment = Instance.new("Frame", Wheel)
+        segment.Size = UDim2.new(1, 0, 1, 0)
+        segment.BackgroundColor3 = segmentColors[(i % #segmentColors) + 1]
+        segment.BackgroundTransparency = 0.3
+        segment.Rotation = startAngle + angleStep / 2
+        
+        local slice = Instance.new("Frame", segment)
+        slice.Size = UDim2.new(0.5, 0, 1, 0)
+        slice.Position = UDim2.new(0.5, 0, 0, 0)
+        slice.BackgroundColor3 = segment.BackgroundColor3
+        slice.BackgroundTransparency = 0
+        
+        local label = Instance.new("TextLabel", segment)
+        label.Size = UDim2.new(0, 40, 0, 20)
+        label.Position = UDim2.new(0.5, -20, 0.3, 0)
+        label.BackgroundTransparency = 1
+        label.Text = formatCoins(reward.coins)
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 10
+        label.Rotation = -segment.Rotation
+        
+        table.insert(wheelSegments, segment)
+    end
+end
+
+-- Kim chỉ
+local Pointer = Instance.new("Frame", WheelContainer)
+Pointer.Size = UDim2.new(0, 20, 0, 30)
+Pointer.Position = UDim2.new(0.5, -10, 0, -15)
+Pointer.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+Pointer.BackgroundTransparency = 0
+Pointer.ZIndex = 2
+Instance.new("UICorner", Pointer).CornerRadius = UDim.new(0, 10)
+
+local pointerTriangle = Instance.new("Frame", Pointer)
+pointerTriangle.Size = UDim2.new(0, 20, 0, 15)
+pointerTriangle.Position = UDim2.new(0, 0, 1, -15)
+pointerTriangle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+pointerTriangle.BackgroundTransparency = 0
+pointerTriangle.Rotation = 180
+Instance.new("UICorner", pointerTriangle).CornerRadius = UDim.new(0, 10)
 
 -- Label kết quả
-local ResultLabel = Instance.new("TextLabel", RewardFrame)
-ResultLabel.Size = UDim2.new(1, 0, 0, 60)
-ResultLabel.Position = UDim2.new(0, 0, 0, 20)
-ResultLabel.BackgroundTransparency = 1
-ResultLabel.Text = "🎰 Nhấn nút để quay!"
+local ResultLabel = Instance.new("TextLabel", WheelContainer)
+ResultLabel.Size = UDim2.new(0, 100, 0, 40)
+ResultLabel.Position = UDim2.new(0.5, -50, 0.5, -20)
+ResultLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ResultLabel.BackgroundTransparency = 0.5
+ResultLabel.Text = "🎰 QUAY"
 ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 ResultLabel.Font = Enum.Font.GothamBold
-ResultLabel.TextSize = 24
+ResultLabel.TextSize = 14
 ResultLabel.TextScaled = true
-
--- Label thông tin phần thưởng
-local RewardInfoLabel = Instance.new("TextLabel", RewardFrame)
-RewardInfoLabel.Size = UDim2.new(1, 0, 0, 30)
-RewardInfoLabel.Position = UDim2.new(0, 0, 0, 90)
-RewardInfoLabel.BackgroundTransparency = 1
-RewardInfoLabel.Text = ""
-RewardInfoLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-RewardInfoLabel.Font = Enum.Font.GothamBold
-RewardInfoLabel.TextSize = 14
-
--- Label giá quay
-local PriceLabel = Instance.new("TextLabel", RewardFrame)
-PriceLabel.Size = UDim2.new(1, 0, 0, 25)
-PriceLabel.Position = UDim2.new(0, 0, 0, 130)
-PriceLabel.BackgroundTransparency = 1
-PriceLabel.Text = "💸 Giá 1 lần quay: 500 Coins"
-PriceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-PriceLabel.Font = Enum.Font.Gotham
-PriceLabel.TextSize = 13
-
--- Label số xu hiện tại
-local CoinsSpinLabel = Instance.new("TextLabel", RewardFrame)
-CoinsSpinLabel.Size = UDim2.new(1, 0, 0, 25)
-CoinsSpinLabel.Position = UDim2.new(0, 0, 0, 155)
-CoinsSpinLabel.BackgroundTransparency = 1
-CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins)
-CoinsSpinLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
-CoinsSpinLabel.Font = Enum.Font.GothamBold
-CoinsSpinLabel.TextSize = 13
+ResultLabel.ZIndex = 3
+Instance.new("UICorner", ResultLabel).CornerRadius = UDim.new(0, 10)
 
 -- Nút quay
 local SpinBtn = Instance.new("TextButton", SpinScroll)
-SpinBtn.Size = UDim2.new(0, 200, 0, 55)
-SpinBtn.Position = UDim2.new(0.5, -100, 0, 280)
+SpinBtn.Size = UDim2.new(0, 200, 0, 45)
+SpinBtn.Position = UDim2.new(0.5, -100, 0, 285)
 SpinBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 SpinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpinBtn.Text = "🎰 QUAY NGAY 🎰"
+SpinBtn.Text = "🎰 QUAY NGAY (500 💸)"
 SpinBtn.Font = Enum.Font.GothamBold
-SpinBtn.TextSize = 18
+SpinBtn.TextSize = 16
 Instance.new("UICorner", SpinBtn).CornerRadius = UDim.new(0, 10)
 
--- Biến lưu phần thưởng
+-- Frame bảng phần thưởng
+local RewardTableFrame = Instance.new("Frame", SpinScroll)
+RewardTableFrame.Size = UDim2.new(1, -20, 0, 150)
+RewardTableFrame.Position = UDim2.new(0, 10, 0, 345)
+RewardTableFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+RewardTableFrame.BackgroundTransparency = 0.5
+Instance.new("UICorner", RewardTableFrame).CornerRadius = UDim.new(0, 10)
+
+local TableTitle = Instance.new("TextLabel", RewardTableFrame)
+TableTitle.Size = UDim2.new(1, 0, 0, 25)
+TableTitle.Position = UDim2.new(0, 0, 0, 5)
+TableTitle.BackgroundTransparency = 1
+TableTitle.Text = "📊 BẢNG PHẦN THƯỞNG"
+TableTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+TableTitle.Font = Enum.Font.GothamBold
+TableTitle.TextSize = 13
+
+local RewardScroll = Instance.new("ScrollingFrame", RewardTableFrame)
+RewardScroll.Size = UDim2.new(1, 0, 1, -35)
+RewardScroll.Position = UDim2.new(0, 0, 0, 30)
+RewardScroll.BackgroundTransparency = 1
+RewardScroll.ScrollBarThickness = 4
+RewardScroll.CanvasSize = UDim2.new(0, 0, 0, 200)
+
+local RewardList = Instance.new("UIListLayout", RewardScroll)
+RewardList.Padding = UDim.new(0, 2)
+RewardList.SortOrder = Enum.SortOrder.LayoutOrder
+
+local InfoLabel = Instance.new("TextLabel", SpinScroll)
+InfoLabel.Size = UDim2.new(1, -20, 0, 20)
+InfoLabel.Position = UDim2.new(0, 10, 0, 505)
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.Text = "💡 Mỗi lần quay tốn 500 Coins. Phần thưởng được nhân với Số X!"
+InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+InfoLabel.Font = Enum.Font.Gotham
+InfoLabel.TextSize = 10
+
+local CoinsSpinLabel = Instance.new("TextLabel", SpinScroll)
+CoinsSpinLabel.Size = UDim2.new(1, -20, 0, 20)
+CoinsSpinLabel.Position = UDim2.new(0, 10, 0, 528)
+CoinsSpinLabel.BackgroundTransparency = 1
+CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
+CoinsSpinLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
+CoinsSpinLabel.Font = Enum.Font.GothamBold
+CoinsSpinLabel.TextSize = 12
+
 local Rewards = {}
 local isSpinning = false
+local rewardItems = {}
+local spinTween = nil
 
--- Hàm tải phần thưởng từ web
 local function loadRewards()
     pcall(function()
         local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/phanthuong")
@@ -1669,14 +1778,53 @@ local function loadRewards()
             end
         end
         
-        -- Sắp xếp theo % giảm dần
         table.sort(Rewards, function(a, b) return a.percent > b.percent end)
+        createWheelSegments(Rewards)
+        updateRewardTable()
     end)
 end
 
--- Hàm quay số
+local function updateRewardTable()
+    for _, item in pairs(rewardItems) do
+        if item and item.Parent then
+            item:Destroy()
+        end
+    end
+    rewardItems = {}
+    
+    for _, reward in ipairs(Rewards) do
+        local item = Instance.new("TextLabel", RewardScroll)
+        item.Size = UDim2.new(1, 0, 0, 25)
+        item.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        item.TextColor3 = Color3.fromRGB(255, 255, 255)
+        item.Font = Enum.Font.GothamBold
+        item.TextSize = 11
+        Instance.new("UICorner", item).CornerRadius = UDim.new(0, 4)
+        
+        local barWidth = reward.percent / 50 * 100
+        item.Text = string.format("🎯 %s%%  →  %s 🪙", reward.percent, formatCoins(reward.coins))
+        item.TextXAlignment = Enum.TextXAlignment.Left
+        item.TextColor3 = reward.percent <= 1 and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(255, 255, 255)
+        
+        local bar = Instance.new("Frame", item)
+        bar.Size = UDim2.new(math.min(barWidth / 100, 1), -10, 1, -4)
+        bar.Position = UDim2.new(0, 0, 0, 2)
+        bar.BackgroundColor3 = reward.percent <= 1 and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(0, 200, 100)
+        bar.BackgroundTransparency = 0.5
+        Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 2)
+        
+        table.insert(rewardItems, item)
+    end
+    
+    RewardScroll.CanvasSize = UDim2.new(0, 0, 0, #Rewards * 27 + 10)
+end
+
 local function spinWheel()
     if isSpinning then return end
+    if #Rewards == 0 then
+        showNoCoinsAlert("❌ Đang tải dữ liệu phần thưởng!")
+        return
+    end
     if settings.Coins < 500 then
         showNoCoinsAlert("❌ Bạn không đủ 500 Coins để quay!")
         return
@@ -1686,71 +1834,101 @@ local function spinWheel()
     SpinBtn.Text = "🔄 ĐANG QUAY..."
     SpinBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     SpinBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    SpinBtn.Visible = false
     
-    -- Trừ tiền
     settings.Coins = settings.Coins - 500
     updateCoinsUI()
     saveVIPData()
-    CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins)
+    CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
     
-    -- Hiệu ứng quay
-    local spinCount = 0
-    local maxSpin = 20 + math.random(10, 20)
+    Wheel.Rotation = 0
     
-    task.spawn(function()
-        while spinCount < maxSpin do
+    local totalPercent = 0
+    local rand = math.random(1, 10000) / 100
+    local selectedReward = nil
+    local selectedIndex = 1
+    
+    for i, reward in ipairs(Rewards) do
+        totalPercent = totalPercent + reward.percent
+        if rand <= totalPercent then
+            selectedReward = reward
+            selectedIndex = i
+            break
+        end
+    end
+    
+    if not selectedReward then
+        selectedReward = Rewards[#Rewards]
+        selectedIndex = #Rewards
+    end
+    
+    local segmentAngle = 360 / #Rewards
+    local targetAngle = (selectedIndex - 1) * segmentAngle + segmentAngle / 2
+    local extraSpins = 5 + math.random(3, 8)
+    local totalRotation = extraSpins * 360 + (360 - targetAngle) + math.random(-5, 5)
+    
+    local startTime = tick()
+    local duration = 3 + math.random(1, 2)
+    local startRotation = 0
+    
+    spinTween = game:GetService("RunService").RenderStepped:Connect(function()
+        local elapsed = tick() - startTime
+        local progress = math.min(elapsed / duration, 1)
+        local easeOut = 1 - (1 - progress) * (1 - progress)
+        local currentRotation = totalRotation * easeOut
+        
+        Wheel.Rotation = currentRotation
+        
+        if progress < 1 then
             local randomReward = Rewards[math.random(1, #Rewards)]
-            ResultLabel.Text = "🎰 " .. randomReward.coins .. " 🪙"
+            ResultLabel.Text = "🎰 " .. randomReward.coins
             ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-            spinCount = spinCount + 1
-            task.wait(0.05 + (spinCount / maxSpin) * 0.15)
+            WheelContainer.BackgroundColor3 = Color3.fromRGB(
+                math.random(50, 200),
+                math.random(50, 200),
+                math.random(50, 200)
+            )
+        else
+            spinTween:Disconnect()
+            
+            local gain = selectedReward.coins * settings.Multiplier
+            settings.Coins = settings.Coins + gain
+            updateCoinsUI()
+            saveVIPData()
+            CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
+            
+            ResultLabel.Text = "🎉 +" .. gain .. " 🪙"
+            ResultLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            WheelContainer.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+            
+            pcall(function()
+                StarterGui:SetCore("SendNotification", {
+                    Title = "🎉 Chúc mừng!",
+                    Text = "Bạn nhận được " .. gain .. " Coins! (X"..settings.Multiplier..")",
+                    Duration = 3,
+                })
+            end)
+            
+            task.wait(1.5)
+            
+            SpinBtn.Visible = true
+            SpinBtn.Text = "🎰 QUAY NGAY (500 💸)"
+            SpinBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+            SpinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            WheelContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            ResultLabel.Text = "🎰 QUAY"
+            ResultLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            isSpinning = false
         end
-        
-        -- Chọn phần thưởng cuối cùng
-        local totalPercent = 0
-        local rand = math.random(1, 10000) / 100
-        
-        for _, reward in ipairs(Rewards) do
-            totalPercent = totalPercent + reward.percent
-            if rand <= totalPercent then
-                -- Cộng thưởng
-                local gain = reward.coins * settings.Multiplier
-                settings.Coins = settings.Coins + gain
-                updateCoinsUI()
-                saveVIPData()
-                CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins)
-                
-                ResultLabel.Text = "🎉 +" .. gain .. " 🪙"
-                ResultLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                RewardInfoLabel.Text = "Phần thưởng: " .. reward.coins .. " Coins (X"..settings.Multiplier..") | Tỷ lệ: " .. reward.percent .. "%"
-                
-                pcall(function()
-                    StarterGui:SetCore("SendNotification", {
-                        Title = "🎉 Chúc mừng!",
-                        Text = "Bạn nhận được " .. gain .. " Coins! (X"..settings.Multiplier..")",
-                        Duration = 3,
-                    })
-                end)
-                break
-            end
-        end
-        
-        SpinBtn.Text = "🎰 QUAY NGAY 🎰"
-        SpinBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        SpinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        isSpinning = false
     end)
 end
 
--- Sự kiện nút quay
 SpinBtn.MouseButton1Click:Connect(spinWheel)
 
--- Hàm cập nhật UI
 local function updateSpinUI()
-    CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins)
+    CoinsSpinLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
 end
 
--- Cập nhật UI mỗi giây
 task.spawn(function()
     while true do
         task.wait(1)
@@ -1758,10 +1936,8 @@ task.spawn(function()
     end
 end)
 
--- Tải phần thưởng lần đầu
 loadRewards()
 
--- Tự động tải lại phần thưởng mỗi 60 giây
 task.spawn(function()
     while true do
         task.wait(60)
@@ -1769,7 +1945,7 @@ task.spawn(function()
     end
 end)
 
--- TAB 9: TÍNH NĂNG AFK
+-- TAB 9: AFK
 local AFKScroll = Tabs["AFK"].Scroll
 
 local AFKTitle = Instance.new("TextLabel", AFKScroll)
