@@ -738,7 +738,7 @@ healthBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================
--- TAB 5: SCRIPT VIP (SẮP XẾP LẠI)
+-- TAB 5: SCRIPT VIP (CẤU TRÚC 5.1 VÀ 5.2 - 2 CỘT)
 -- ============================================
 local VIP_Scroll = Tabs["Script VIP"].Scroll
 
@@ -746,7 +746,9 @@ for _, child in pairs(VIP_Scroll:GetChildren()) do
     child:Destroy()
 end
 
--- PHẦN 1: MUA VIP TRỰC TIẾP (ĐƯA LÊN TRÊN CÙNG)
+-- ============================================
+-- PHẦN 5.1: MUA VIP (HIỆN KHI CHƯA CÓ VIP)
+-- ============================================
 local BuyKeyFrame = Instance.new("Frame", VIP_Scroll)
 BuyKeyFrame.Size = UDim2.new(1, -20, 0, 230)
 BuyKeyFrame.Position = UDim2.new(0, 10, 0, 5)
@@ -839,19 +841,22 @@ local function showBuyKey()
     BuyKeyFrame.Visible = true
 end
 
-local function updateBuyKeyUI()
+local function updateVIPDisplay()
     CoinsDisplay.Text = "💸 Số Coins hiện có: " .. formatCoins(settings.Coins)
+    
     if settings.VIP_Status.IsUnlocked and settings.VIP_Status.TimeRemaining > 0 then
         local timeStr = formatHPS(settings.VIP_Status.TimeRemaining)
         VIPTimeDisplay.Text = "⏰ Thời gian VIP hiện tại: " .. timeStr
         TimeLabel.Text = "⏰ VIP Status: Active - " .. timeStr
         TimeLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        hideBuyKey()
+        hideBuyKey() -- Ẩn 5.1
+        ScriptVIPFrame.Visible = true -- Hiện 5.2
     else
         VIPTimeDisplay.Text = "⏰ Thời gian VIP hiện tại: Chưa có"
         TimeLabel.Text = "⏰ VIP Status: Locked"
         TimeLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
-        showBuyKey()
+        showBuyKey() -- Hiện 5.1
+        ScriptVIPFrame.Visible = false -- Ẩn 5.2
     end
 end
 
@@ -893,15 +898,13 @@ local function buyVIP(coins)
         
         updateCoinsUI()
         saveVIPData()
-        updateBuyKeyUI()
+        updateVIPDisplay()
         
         showNoCoinsAlert("✅ Mua VIP thành công!\n⏰ +" .. formatHPS(timeSeconds) .. " VIP\n💸 -" .. formatCoins(coins) .. " Coins")
         
         CoinInput.Text = ""
         ResultLabel.Text = "✅ Đã mua thành công! Bạn nhận được " .. formatHPS(timeSeconds) .. " VIP"
         ResultLabel.TextColor3 = Color3.fromRGB(0, 150, 0)
-        
-        hideBuyKey()
     else
         showNoCoinsAlert("❌ Bạn không đủ tiền!\nCần " .. formatCoins(coins) .. " Coins\nBạn có " .. formatCoins(settings.Coins) .. " Coins")
     end
@@ -919,13 +922,15 @@ CoinInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- ========== PHẦN 2: SCRIPT VIP (HIỆN NGAY BÊN DƯỚI) ==========
+-- ============================================
+-- PHẦN 5.2: SCRIPT VIP (2 CỘT - UIGridLayout)
+-- ============================================
 local ScriptVIPFrame = Instance.new("Frame", VIP_Scroll)
-ScriptVIPFrame.Size = UDim2.new(1, -20, 0, 280)
-ScriptVIPFrame.Position = UDim2.new(0, 10, 0, 250)
+ScriptVIPFrame.Size = UDim2.new(1, -20, 0, 350)
+ScriptVIPFrame.Position = UDim2.new(0, 10, 0, 5)
 ScriptVIPFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 ScriptVIPFrame.BackgroundTransparency = 0.3
-ScriptVIPFrame.Visible = true
+ScriptVIPFrame.Visible = false
 Instance.new("UICorner", ScriptVIPFrame).CornerRadius = UDim.new(0, 10)
 
 local ScriptVIPTitle = Instance.new("TextLabel", ScriptVIPFrame)
@@ -937,10 +942,25 @@ ScriptVIPTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 ScriptVIPTitle.Font = Enum.Font.GothamBold
 ScriptVIPTitle.TextSize = 15
 
-local function addVIPScriptButton(name, x, y, url)
-    local btn = Instance.new("TextButton", ScriptVIPFrame)
+-- ScrollingFrame để cuộn
+local ScriptScrollVIP = Instance.new("ScrollingFrame", ScriptVIPFrame)
+ScriptScrollVIP.Size = UDim2.new(1, -10, 1, -40)
+ScriptScrollVIP.Position = UDim2.new(0, 5, 0, 35)
+ScriptScrollVIP.BackgroundTransparency = 1
+ScriptScrollVIP.ScrollBarThickness = 4
+ScriptScrollVIP.CanvasSize = UDim2.new(0, 0, 0, 400)
+
+-- UIGridLayout cho 2 cột
+local GridLayout = Instance.new("UIGridLayout", ScriptScrollVIP)
+GridLayout.CellSize = UDim2.new(0, 170, 0, 38)
+GridLayout.CellPadding = UDim.new(0, 10)
+GridLayout.FillDirection = Enum.FillDirection.Vertical
+GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+GridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+
+local function addVIPScriptButton(name, url)
+    local btn = Instance.new("TextButton", ScriptScrollVIP)
     btn.Size = UDim2.new(0, 170, 0, 38)
-    btn.Position = UDim2.new(0, x, 0, y)
     btn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     btn.Text = "⭐ " .. name
     btn.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -962,29 +982,38 @@ local function addVIPScriptButton(name, x, y, url)
         end
     end)
     
-    if settings.VIP_Status.IsUnlocked and settings.VIP_Status.TimeRemaining > 0 then
-        btn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        btn.Text = "✅ " .. name
-    end
-    
     return btn
 end
 
-addVIPScriptButton("tp VIP", 10, 45, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
-addVIPScriptButton("99night VIP", 195, 45, "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
-addVIPScriptButton("MergeaNuke", 10, 95, "https://raw.githubusercontent.com/gumanba/Scripts/main/MergeaNuke")
-addVIPScriptButton("Keyboard Escape", 195, 95, "https://raw.githubusercontent.com/gumanba/Scripts/main/1SpeedKeyboardBrainrotEscape")
-addVIPScriptButton("Become Brainrot", 10, 145, "https://raw.githubusercontent.com/gumanba/Scripts/main/BecomeABrainrot")
-addVIPScriptButton("Animal Hospital", 195, 145, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
-addVIPScriptButton("Survive on Raft", 10, 195, "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
-addVIPScriptButton("Fly", 195, 195, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
-addVIPScriptButton("Fling", 10, 245, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fling")
-addVIPScriptButton("Brainrot Evolution", 195, 245, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
+-- Danh sách Script VIP (tự động xếp 2 cột)
+addVIPScriptButton("tp VIP", "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
+addVIPScriptButton("99night VIP", "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
+addVIPScriptButton("MergeaNuke", "https://raw.githubusercontent.com/gumanba/Scripts/main/MergeaNuke")
+addVIPScriptButton("Keyboard Escape", "https://raw.githubusercontent.com/gumanba/Scripts/main/1SpeedKeyboardBrainrotEscape")
+addVIPScriptButton("Become Brainrot", "https://raw.githubusercontent.com/gumanba/Scripts/main/BecomeABrainrot")
+addVIPScriptButton("Animal Hospital", "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
+addVIPScriptButton("Survive on Raft", "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
+addVIPScriptButton("Fly", "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
+addVIPScriptButton("Fling", "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fling")
+addVIPScriptButton("Brainrot Evolution", "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
 
--- ========== PHẦN 3: SỰ KIỆN ==========
+-- Cập nhật CanvasSize tự động
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        local count = #ScriptScrollVIP:GetChildren()
+        local rows = math.ceil(count / 2)
+        local height = rows * 48 + 20
+        ScriptScrollVIP.CanvasSize = UDim2.new(0, 0, 0, height)
+    end
+end)
+
+-- ============================================
+-- PHẦN 5.3: SỰ KIỆN (HIỆN CẢ 2 TRƯỜNG HỢP)
+-- ============================================
 local EventFrame = Instance.new("Frame", VIP_Scroll)
 EventFrame.Size = UDim2.new(1, -20, 0, 200)
-EventFrame.Position = UDim2.new(0, 10, 0, 540)
+EventFrame.Position = UDim2.new(0, 10, 0, 360)
 EventFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 EventFrame.BackgroundTransparency = 0.3
 EventFrame.Visible = true
@@ -1035,18 +1064,9 @@ EventDescLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 EventDescLabel.Font = Enum.Font.GothamBold
 EventDescLabel.TextSize = 13
 
-local BoostStatusLabel = Instance.new("TextLabel", EventFrame)
-BoostStatusLabel.Size = UDim2.new(1, 0, 0, 25)
-BoostStatusLabel.Position = UDim2.new(0, 0, 0, 145)
-BoostStatusLabel.BackgroundTransparency = 1
-BoostStatusLabel.Text = ""
-BoostStatusLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-BoostStatusLabel.Font = Enum.Font.GothamBold
-BoostStatusLabel.TextSize = 13
-
 local ClaimEventBtn = Instance.new("TextButton", EventFrame)
 ClaimEventBtn.Size = UDim2.new(0, 180, 0, 40)
-ClaimEventBtn.Position = UDim2.new(0.5, -90, 0, 172)
+ClaimEventBtn.Position = UDim2.new(0.5, -90, 0, 150)
 ClaimEventBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 ClaimEventBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ClaimEventBtn.Text = "🎁 NHẬN THƯỞNG"
@@ -1134,7 +1154,6 @@ local function updateEventUI()
         EventTimeLabel.Text = ""
         EventRewardLabel.Text = ""
         EventDescLabel.Text = ""
-        BoostStatusLabel.Text = ""
         ClaimEventBtn.Visible = false
         return
     end
@@ -1154,19 +1173,12 @@ local function updateEventUI()
             if event.name:lower() == "chat" then
                 EventDescLabel.Text = "💬 SỰ KIỆN CHAT X2 BẮT ĐẦU!"
                 EventDescLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-                BoostStatusLabel.Text = "🔥 Nhân đôi phần thưởng trong thời gian này!"
-                BoostStatusLabel.TextColor3 = Color3.fromRGB(255, 100, 0)
-                
             elseif event.name:lower() == "hieuung" then
                 EventDescLabel.Text = "⚡ HIỆU ỨNG BOOST X2 ĐANG HOẠT ĐỘNG!"
                 EventDescLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-                BoostStatusLabel.Text = "🔥 Tất cả phần thưởng được nhân X2!"
-                BoostStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-                
             else
                 EventDescLabel.Text = "🎯 Sự kiện: " .. event.name
                 EventDescLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-                BoostStatusLabel.Text = ""
             end
             
             ClaimEventBtn.Visible = true
@@ -1182,29 +1194,16 @@ local function updateEventUI()
             if event.name:lower() == "chat" then
                 EventDescLabel.Text = "💬 Sự kiện chat x2 (đã kết thúc)"
                 EventDescLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-                BoostStatusLabel.Text = ""
             elseif event.name:lower() == "hieuung" then
                 EventDescLabel.Text = "⚡ Hiệu ứng boost x2 (đã kết thúc)"
                 EventDescLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-                BoostStatusLabel.Text = ""
             else
                 EventDescLabel.Text = ""
-                BoostStatusLabel.Text = ""
             end
             
             ClaimEventBtn.Visible = false
             ClaimEventBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
             ClaimEventBtn.Text = "⛔ HẾT HẠN"
-        end
-    end
-    
-    if not hasActiveEvent then
-        ClaimEventBtn.Visible = false
-        if #EventData > 0 then
-            EventNameLabel.Text = "📌 " .. string.upper(EventData[1].name)
-            EventTimeLabel.Text = "⏰ Thời gian: " .. EventData[1].time
-            EventTimeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-            EventRewardLabel.Text = "🎁 Phần thưởng: " .. EventData[1].reward
         end
     end
 end
@@ -1256,7 +1255,7 @@ ClaimEventBtn.MouseButton1Click:Connect(claimEvent)
 task.spawn(function()
     while true do
         task.wait(1)
-        updateBuyKeyUI()
+        updateVIPDisplay()
         if Tabs["Script VIP"].Frame.Visible then
             updateEventUI()
         end
@@ -1861,7 +1860,7 @@ task.spawn(function()
     end
 end)
 
--- ========== TAB 8: DAILY REWARD (CÓ NÚT HIỂN THỊ) ==========
+-- ========== TAB 8: DAILY REWARD ==========
 local DailyScroll = Tabs["Daily Reward"].Scroll
 
 for _, child in pairs(DailyScroll:GetChildren()) do
