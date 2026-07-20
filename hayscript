@@ -371,10 +371,10 @@ createTab("Main", 300)
 createTab("Vision", 300)
 createTab("Script", 750) 
 createTab("Setting", 350)
-createTab("Script VIP", 450)
-createTab("Coins Ads", 400) 
+createTab("Script VIP", 800)
+createTab("Coins Ads", 450)
 createTab("Code New", 600)
-createTab("Daily Reward", 450)
+createTab("Daily Reward", 500)
 createTab("AFK", 400)
 createTab("Tiền", 400)
 createTab("Admin", 450)
@@ -447,7 +447,7 @@ local function syncUIByFirebase()
     end
 end
 
--- TAB 1: MAIN
+-- ========== TAB 1: MAIN ==========
 createToggleButton("Main","Speed",20,"SpeedToggle",function(on)
     if on then
         if not getgenv().SpeedConn then
@@ -493,7 +493,7 @@ createToggleButton("Main","Noclip",120,"Noclip",function(on)
     end
 end)
 
--- TAB 2: VISION
+-- ========== TAB 2: VISION ==========
 local function applyHitboxReal(p, teamCheck)
     if p == player or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then return end
     if settings.HitboxBlacklist[p.Name] then return end 
@@ -628,7 +628,7 @@ rs.Heartbeat:Connect(function()
     end
 end)
 
--- TAB 3: SCRIPT THƯỜNG
+-- ========== TAB 3: SCRIPT THƯỜNG ==========
 local ScriptScroll = Tabs["Script"].Scroll
 
 local function addScriptButton(name, x, y, url)
@@ -651,7 +651,7 @@ addScriptButton("Fix Lag Hệ Thống", 20, 40, "https://raw.githubusercontent.c
 addScriptButton("Blox Fruit Hub", 20, 125, "https://pastefy.app/AjS0TLCt/raw")
 addScriptButton("Turbo Lite Auto", 210, 125, "https://raw.githubusercontent.com/TurboLite/Script/refs/heads/main/MainV2.lua")
 
--- TAB 4: SETTING
+-- ========== TAB 4: SETTING ==========
 local SettingScroll = Tabs["Setting"].Scroll
 
 local speedLabel = Instance.new("TextLabel", SettingScroll)
@@ -737,39 +737,45 @@ healthBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- TAB 5: SCRIPT VIP
+-- ============================================
+-- TAB 5: SCRIPT VIP (SẮP XẾP LẠI)
+-- ============================================
 local VIP_Scroll = Tabs["Script VIP"].Scroll
 
-local TimeLabel = Instance.new("TextLabel", Tabs["Script VIP"].Frame) 
-TimeLabel.Size = UDim2.new(0, 200, 0, 25)
-TimeLabel.Position = UDim2.new(0, 10, 0, 5)
-TimeLabel.BackgroundTransparency = 1
-TimeLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
-TimeLabel.Font = Enum.Font.GothamBold
-TimeLabel.TextSize = 12
-TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
-TimeLabel.Text = "VIP Status: Locked"
+for _, child in pairs(VIP_Scroll:GetChildren()) do
+    child:Destroy()
+end
 
+-- PHẦN 1: MUA VIP TRỰC TIẾP (ĐƯA LÊN TRÊN CÙNG)
 local BuyKeyFrame = Instance.new("Frame", VIP_Scroll)
-BuyKeyFrame.Size = UDim2.new(1, -20, 0, 220)
-BuyKeyFrame.Position = UDim2.new(0, 10, 0, 35)
+BuyKeyFrame.Size = UDim2.new(1, -20, 0, 230)
+BuyKeyFrame.Position = UDim2.new(0, 10, 0, 5)
 BuyKeyFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 BuyKeyFrame.BackgroundTransparency = 0.3
 BuyKeyFrame.Visible = true
 Instance.new("UICorner", BuyKeyFrame).CornerRadius = UDim.new(0, 10)
 
+local TimeLabel = Instance.new("TextLabel", BuyKeyFrame)
+TimeLabel.Size = UDim2.new(1, 0, 0, 30)
+TimeLabel.Position = UDim2.new(0, 0, 0, 5)
+TimeLabel.BackgroundTransparency = 1
+TimeLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+TimeLabel.Font = Enum.Font.GothamBold
+TimeLabel.TextSize = 14
+TimeLabel.Text = "⏰ VIP Status: Locked"
+
 local TitleLabel = Instance.new("TextLabel", BuyKeyFrame)
-TitleLabel.Size = UDim2.new(1, 0, 0, 35)
-TitleLabel.Position = UDim2.new(0, 0, 0, 5)
+TitleLabel.Size = UDim2.new(1, 0, 0, 30)
+TitleLabel.Position = UDim2.new(0, 0, 0, 35)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "💎 MUA KEY VIP (100 💸 = 1 giờ)"
+TitleLabel.Text = "💎 MUA VIP TRỰC TIẾP (100 💸 = 1 giờ)"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 180, 0)
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextSize = 15
+TitleLabel.TextSize = 14
 
 local CoinsDisplay = Instance.new("TextLabel", BuyKeyFrame)
 CoinsDisplay.Size = UDim2.new(1, 0, 0, 25)
-CoinsDisplay.Position = UDim2.new(0, 0, 0, 45)
+CoinsDisplay.Position = UDim2.new(0, 0, 0, 70)
 CoinsDisplay.BackgroundTransparency = 1
 CoinsDisplay.Text = "💸 Số Coins hiện có: " .. formatCoins(settings.Coins)
 CoinsDisplay.TextColor3 = Color3.fromRGB(220, 150, 0)
@@ -778,16 +784,16 @@ CoinsDisplay.TextSize = 13
 
 local VIPTimeDisplay = Instance.new("TextLabel", BuyKeyFrame)
 VIPTimeDisplay.Size = UDim2.new(1, 0, 0, 25)
-VIPTimeDisplay.Position = UDim2.new(0, 0, 0, 75)
+VIPTimeDisplay.Position = UDim2.new(0, 0, 0, 98)
 VIPTimeDisplay.BackgroundTransparency = 1
-VIPTimeDisplay.Text = "⏰ Thời gian VIP hiện tại: " .. (settings.VIP_Status.IsUnlocked and formatHPS(settings.VIP_Status.TimeRemaining) or "Chưa có")
+VIPTimeDisplay.Text = "⏰ Thời gian VIP hiện tại: Chưa có"
 VIPTimeDisplay.TextColor3 = Color3.fromRGB(0, 150, 255)
 VIPTimeDisplay.Font = Enum.Font.GothamBold
 VIPTimeDisplay.TextSize = 13
 
 local InputLabel = Instance.new("TextLabel", BuyKeyFrame)
 InputLabel.Size = UDim2.new(0, 100, 0, 25)
-InputLabel.Position = UDim2.new(0, 10, 0, 115)
+InputLabel.Position = UDim2.new(0, 10, 0, 133)
 InputLabel.BackgroundTransparency = 1
 InputLabel.Text = "Nhập số Coins:"
 InputLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -797,7 +803,7 @@ InputLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local CoinInput = Instance.new("TextBox", BuyKeyFrame)
 CoinInput.Size = UDim2.new(0, 150, 0, 35)
-CoinInput.Position = UDim2.new(0, 120, 0, 110)
+CoinInput.Position = UDim2.new(0, 120, 0, 128)
 CoinInput.PlaceholderText = "Nhập số Coins..."
 CoinInput.Text = ""
 CoinInput.TextSize = 14
@@ -807,17 +813,17 @@ Instance.new("UICorner", CoinInput).CornerRadius = UDim.new(0, 6)
 
 local BuyBtn = Instance.new("TextButton", BuyKeyFrame)
 BuyBtn.Size = UDim2.new(0, 100, 0, 35)
-BuyBtn.Position = UDim2.new(0, 280, 0, 110)
+BuyBtn.Position = UDim2.new(0, 280, 0, 128)
 BuyBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
 BuyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-BuyBtn.Text = "MUA KEY"
+BuyBtn.Text = "MUA VIP"
 BuyBtn.Font = Enum.Font.GothamBold
 BuyBtn.TextSize = 14
 Instance.new("UICorner", BuyBtn).CornerRadius = UDim.new(0, 6)
 
 local ResultLabel = Instance.new("TextLabel", BuyKeyFrame)
 ResultLabel.Size = UDim2.new(1, -20, 0, 35)
-ResultLabel.Position = UDim2.new(0, 10, 0, 160)
+ResultLabel.Position = UDim2.new(0, 10, 0, 178)
 ResultLabel.BackgroundTransparency = 1
 ResultLabel.Text = "💡 Nhập số Coins để xem thời gian nhận được"
 ResultLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
@@ -825,24 +831,27 @@ ResultLabel.Font = Enum.Font.Gotham
 ResultLabel.TextSize = 12
 ResultLabel.TextWrapped = true
 
-local function updateVipTimerUI()
-    if settings.VIP_Status.IsUnlocked then
-        if settings.VIP_Status.KeyType == "Permanent" then
-            TimeLabel.Text = "VIP Status: Permanent"
-        else
-            TimeLabel.Text = "VIP Status: " .. formatHPS(settings.VIP_Status.TimeRemaining)
-        end
-    else
-        TimeLabel.Text = "VIP Status: Locked"
-    end
+local function hideBuyKey()
+    BuyKeyFrame.Visible = false
+end
+
+local function showBuyKey()
+    BuyKeyFrame.Visible = true
 end
 
 local function updateBuyKeyUI()
     CoinsDisplay.Text = "💸 Số Coins hiện có: " .. formatCoins(settings.Coins)
-    if settings.VIP_Status.IsUnlocked then
-        VIPTimeDisplay.Text = "⏰ Thời gian VIP hiện tại: " .. formatHPS(settings.VIP_Status.TimeRemaining)
+    if settings.VIP_Status.IsUnlocked and settings.VIP_Status.TimeRemaining > 0 then
+        local timeStr = formatHPS(settings.VIP_Status.TimeRemaining)
+        VIPTimeDisplay.Text = "⏰ Thời gian VIP hiện tại: " .. timeStr
+        TimeLabel.Text = "⏰ VIP Status: Active - " .. timeStr
+        TimeLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        hideBuyKey()
     else
         VIPTimeDisplay.Text = "⏰ Thời gian VIP hiện tại: Chưa có"
+        TimeLabel.Text = "⏰ VIP Status: Locked"
+        TimeLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+        showBuyKey()
     end
 end
 
@@ -860,7 +869,7 @@ CoinInput:GetPropertyChangedSignal("Text"):Connect(function()
     end
 end)
 
-local function buyKeyWithCoins(coins)
+local function buyVIP(coins)
     if not coins or coins <= 0 then
         showNoCoinsAlert("❌ Vui lòng nhập số Coins hợp lệ!")
         return
@@ -884,14 +893,15 @@ local function buyKeyWithCoins(coins)
         
         updateCoinsUI()
         saveVIPData()
-        updateVipTimerUI()
         updateBuyKeyUI()
         
-        showNoCoinsAlert("✅ Mua thành công!\n⏰ +" .. formatHPS(timeSeconds) .. " VIP\n💸 -" .. formatCoins(coins) .. " Coins")
+        showNoCoinsAlert("✅ Mua VIP thành công!\n⏰ +" .. formatHPS(timeSeconds) .. " VIP\n💸 -" .. formatCoins(coins) .. " Coins")
         
         CoinInput.Text = ""
         ResultLabel.Text = "✅ Đã mua thành công! Bạn nhận được " .. formatHPS(timeSeconds) .. " VIP"
         ResultLabel.TextColor3 = Color3.fromRGB(0, 150, 0)
+        
+        hideBuyKey()
     else
         showNoCoinsAlert("❌ Bạn không đủ tiền!\nCần " .. formatCoins(coins) .. " Coins\nBạn có " .. formatCoins(settings.Coins) .. " Coins")
     end
@@ -899,25 +909,384 @@ end
 
 BuyBtn.MouseButton1Click:Connect(function()
     local amount = tonumber(CoinInput.Text)
-    buyKeyWithCoins(amount)
+    buyVIP(amount)
 end)
 
 CoinInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         local amount = tonumber(CoinInput.Text)
-        buyKeyWithCoins(amount)
+        buyVIP(amount)
     end
 end)
+
+-- ========== PHẦN 2: SCRIPT VIP (HIỆN NGAY BÊN DƯỚI) ==========
+local ScriptVIPFrame = Instance.new("Frame", VIP_Scroll)
+ScriptVIPFrame.Size = UDim2.new(1, -20, 0, 280)
+ScriptVIPFrame.Position = UDim2.new(0, 10, 0, 250)
+ScriptVIPFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+ScriptVIPFrame.BackgroundTransparency = 0.3
+ScriptVIPFrame.Visible = true
+Instance.new("UICorner", ScriptVIPFrame).CornerRadius = UDim.new(0, 10)
+
+local ScriptVIPTitle = Instance.new("TextLabel", ScriptVIPFrame)
+ScriptVIPTitle.Size = UDim2.new(1, 0, 0, 30)
+ScriptVIPTitle.Position = UDim2.new(0, 0, 0, 5)
+ScriptVIPTitle.BackgroundTransparency = 1
+ScriptVIPTitle.Text = "⭐ SCRIPT VIP ⭐"
+ScriptVIPTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+ScriptVIPTitle.Font = Enum.Font.GothamBold
+ScriptVIPTitle.TextSize = 15
+
+local function addVIPScriptButton(name, x, y, url)
+    local btn = Instance.new("TextButton", ScriptVIPFrame)
+    btn.Size = UDim2.new(0, 170, 0, 38)
+    btn.Position = UDim2.new(0, x, 0, y)
+    btn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    btn.Text = "⭐ " .. name
+    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+    
+    btn.MouseButton1Click:Connect(function()
+        if not settings.VIP_Status.IsUnlocked or settings.VIP_Status.TimeRemaining <= 0 then
+            showNoCoinsAlert("❌ Bạn cần mua VIP để sử dụng Script VIP!\nMua ngay tại Tab Script VIP")
+            return
+        end
+        
+        local success, err = pcall(function() 
+            loadstring(game:HttpGet(url))() 
+        end)
+        if not success then 
+            warn("Failed to load VIP script "..name..": "..err) 
+        end
+    end)
+    
+    if settings.VIP_Status.IsUnlocked and settings.VIP_Status.TimeRemaining > 0 then
+        btn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        btn.Text = "✅ " .. name
+    end
+    
+    return btn
+end
+
+addVIPScriptButton("tp VIP", 10, 45, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/tphay")
+addVIPScriptButton("99night VIP", 195, 45, "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
+addVIPScriptButton("MergeaNuke", 10, 95, "https://raw.githubusercontent.com/gumanba/Scripts/main/MergeaNuke")
+addVIPScriptButton("Keyboard Escape", 195, 95, "https://raw.githubusercontent.com/gumanba/Scripts/main/1SpeedKeyboardBrainrotEscape")
+addVIPScriptButton("Become Brainrot", 10, 145, "https://raw.githubusercontent.com/gumanba/Scripts/main/BecomeABrainrot")
+addVIPScriptButton("Animal Hospital", 195, 145, "https://raw.githubusercontent.com/gumanba/Scripts/main/AnimalHospital")
+addVIPScriptButton("Survive on Raft", 10, 195, "https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveonaRaft")
+addVIPScriptButton("Fly", 195, 195, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fly")
+addVIPScriptButton("Fling", 10, 245, "https://raw.githubusercontent.com/bobaconhub-creator/Main/refs/heads/main/fling")
+addVIPScriptButton("Brainrot Evolution", 195, 245, "https://raw.githubusercontent.com/gumanba/Scripts/main/BrainrotEvolution")
+
+-- ========== PHẦN 3: SỰ KIỆN ==========
+local EventFrame = Instance.new("Frame", VIP_Scroll)
+EventFrame.Size = UDim2.new(1, -20, 0, 200)
+EventFrame.Position = UDim2.new(0, 10, 0, 540)
+EventFrame.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+EventFrame.BackgroundTransparency = 0.3
+EventFrame.Visible = true
+Instance.new("UICorner", EventFrame).CornerRadius = UDim.new(0, 10)
+
+local EventTitle = Instance.new("TextLabel", EventFrame)
+EventTitle.Size = UDim2.new(1, 0, 0, 30)
+EventTitle.Position = UDim2.new(0, 0, 0, 5)
+EventTitle.BackgroundTransparency = 1
+EventTitle.Text = "🎉 SỰ KIỆN ĐẶC BIỆT 🎉"
+EventTitle.TextColor3 = Color3.fromRGB(255, 50, 50)
+EventTitle.Font = Enum.Font.GothamBold
+EventTitle.TextSize = 15
+
+local EventNameLabel = Instance.new("TextLabel", EventFrame)
+EventNameLabel.Size = UDim2.new(1, 0, 0, 25)
+EventNameLabel.Position = UDim2.new(0, 0, 0, 38)
+EventNameLabel.BackgroundTransparency = 1
+EventNameLabel.Text = "📌 Đang tải sự kiện..."
+EventNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+EventNameLabel.Font = Enum.Font.GothamBold
+EventNameLabel.TextSize = 14
+
+local EventTimeLabel = Instance.new("TextLabel", EventFrame)
+EventTimeLabel.Size = UDim2.new(1, 0, 0, 25)
+EventTimeLabel.Position = UDim2.new(0, 0, 0, 65)
+EventTimeLabel.BackgroundTransparency = 1
+EventTimeLabel.Text = "⏰ Đang cập nhật..."
+EventTimeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+EventTimeLabel.Font = Enum.Font.Gotham
+EventTimeLabel.TextSize = 12
+
+local EventRewardLabel = Instance.new("TextLabel", EventFrame)
+EventRewardLabel.Size = UDim2.new(1, 0, 0, 25)
+EventRewardLabel.Position = UDim2.new(0, 0, 0, 92)
+EventRewardLabel.BackgroundTransparency = 1
+EventRewardLabel.Text = "🎁 Phần thưởng: Đang cập nhật..."
+EventRewardLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+EventRewardLabel.Font = Enum.Font.GothamBold
+EventRewardLabel.TextSize = 13
+
+local EventDescLabel = Instance.new("TextLabel", EventFrame)
+EventDescLabel.Size = UDim2.new(1, 0, 0, 25)
+EventDescLabel.Position = UDim2.new(0, 0, 0, 118)
+EventDescLabel.BackgroundTransparency = 1
+EventDescLabel.Text = ""
+EventDescLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+EventDescLabel.Font = Enum.Font.GothamBold
+EventDescLabel.TextSize = 13
+
+local BoostStatusLabel = Instance.new("TextLabel", EventFrame)
+BoostStatusLabel.Size = UDim2.new(1, 0, 0, 25)
+BoostStatusLabel.Position = UDim2.new(0, 0, 0, 145)
+BoostStatusLabel.BackgroundTransparency = 1
+BoostStatusLabel.Text = ""
+BoostStatusLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+BoostStatusLabel.Font = Enum.Font.GothamBold
+BoostStatusLabel.TextSize = 13
+
+local ClaimEventBtn = Instance.new("TextButton", EventFrame)
+ClaimEventBtn.Size = UDim2.new(0, 180, 0, 40)
+ClaimEventBtn.Position = UDim2.new(0.5, -90, 0, 172)
+ClaimEventBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+ClaimEventBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClaimEventBtn.Text = "🎁 NHẬN THƯỞNG"
+ClaimEventBtn.Font = Enum.Font.GothamBold
+ClaimEventBtn.TextSize = 14
+ClaimEventBtn.Visible = false
+Instance.new("UICorner", ClaimEventBtn).CornerRadius = UDim.new(0, 8)
+
+local EventData = {}
+local lastEventClaim = {}
+
+local function getToday()
+    local now = os.date("*t")
+    return string.format("%d-%d-%d", now.day, now.month, now.year)
+end
+
+local function isEventTimeValid(timeString)
+    if not timeString or timeString == "" then return false end
+    
+    local now = os.date("*t")
+    local currentMinutes = now.hour * 60 + now.min
+    local currentDay = now.day
+    local currentMonth = now.month
+    local currentYear = now.year
+    
+    local parts = {}
+    for part in string.gmatch(timeString, "[^:]+") do
+        table.insert(parts, part)
+    end
+    
+    local isHourValid = false
+    local isDateValid = false
+    
+    for _, part in ipairs(parts) do
+        local hourMatch = string.match(part, "^(%d+)%.(%d+)-(%d+)%.(%d+)$")
+        if hourMatch then
+            local startH, startM, endH, endM = tonumber(hourMatch), tonumber(hourMatch), tonumber(hourMatch), tonumber(hourMatch)
+            local startMinutes = startH * 60 + startM
+            local endMinutes = endH * 60 + endM
+            
+            if startMinutes <= endMinutes then
+                isHourValid = (currentMinutes >= startMinutes and currentMinutes <= endMinutes)
+            else
+                isHourValid = (currentMinutes >= startMinutes or currentMinutes <= endMinutes)
+            end
+        end
+        
+        local dateMatch = string.match(part, "^(%d+)/(%d+)/(%d+)-(%d+)/(%d+)/(%d+)$")
+        if dateMatch then
+            local startD, startM, startY, endD, endM, endY = tonumber(dateMatch), tonumber(dateMatch), tonumber(dateMatch), tonumber(dateMatch), tonumber(dateMatch), tonumber(dateMatch)
+            local startDate = os.time({day=startD, month=startM, year=startY})
+            local endDate = os.time({day=endD, month=endM, year=endY})
+            local nowTime = os.time()
+            
+            isDateValid = (nowTime >= startDate and nowTime <= endDate)
+        end
+    end
+    
+    return isHourValid and isDateValid
+end
+
+local function loadEvents()
+    pcall(function()
+        local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/adminabou/refs/heads/main/adminbau")
+        EventData = {}
+        
+        for line in res:gmatch("[^\r\n]+") do
+            local split = string.split(line, ":")
+            if #split >= 3 then
+                table.insert(EventData, {
+                    name = split[1] or "",
+                    reward = split[2] or "",
+                    time = split[3] or ""
+                })
+            end
+        end
+        
+        updateEventUI()
+    end)
+end
+
+local function updateEventUI()
+    if #EventData == 0 then
+        EventNameLabel.Text = "📌 Không có sự kiện nào đang diễn ra"
+        EventTimeLabel.Text = ""
+        EventRewardLabel.Text = ""
+        EventDescLabel.Text = ""
+        BoostStatusLabel.Text = ""
+        ClaimEventBtn.Visible = false
+        return
+    end
+    
+    local hasActiveEvent = false
+    
+    for _, event in ipairs(EventData) do
+        local isValid = isEventTimeValid(event.time)
+        
+        if isValid then
+            hasActiveEvent = true
+            EventNameLabel.Text = "📌 " .. string.upper(event.name)
+            EventTimeLabel.Text = "⏰ Thời gian: " .. event.time
+            EventTimeLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            EventRewardLabel.Text = "🎁 Phần thưởng: " .. event.reward
+            
+            if event.name:lower() == "chat" then
+                EventDescLabel.Text = "💬 SỰ KIỆN CHAT X2 BẮT ĐẦU!"
+                EventDescLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+                BoostStatusLabel.Text = "🔥 Nhân đôi phần thưởng trong thời gian này!"
+                BoostStatusLabel.TextColor3 = Color3.fromRGB(255, 100, 0)
+                
+            elseif event.name:lower() == "hieuung" then
+                EventDescLabel.Text = "⚡ HIỆU ỨNG BOOST X2 ĐANG HOẠT ĐỘNG!"
+                EventDescLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+                BoostStatusLabel.Text = "🔥 Tất cả phần thưởng được nhân X2!"
+                BoostStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+                
+            else
+                EventDescLabel.Text = "🎯 Sự kiện: " .. event.name
+                EventDescLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                BoostStatusLabel.Text = ""
+            end
+            
+            ClaimEventBtn.Visible = true
+            ClaimEventBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+            ClaimEventBtn.Text = "🎁 NHẬN THƯỞNG"
+            break
+        else
+            EventNameLabel.Text = "📌 " .. string.upper(event.name)
+            EventTimeLabel.Text = "⏰ Thời gian: " .. event.time
+            EventTimeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+            EventRewardLabel.Text = "🎁 Phần thưởng: " .. event.reward
+            
+            if event.name:lower() == "chat" then
+                EventDescLabel.Text = "💬 Sự kiện chat x2 (đã kết thúc)"
+                EventDescLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+                BoostStatusLabel.Text = ""
+            elseif event.name:lower() == "hieuung" then
+                EventDescLabel.Text = "⚡ Hiệu ứng boost x2 (đã kết thúc)"
+                EventDescLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+                BoostStatusLabel.Text = ""
+            else
+                EventDescLabel.Text = ""
+                BoostStatusLabel.Text = ""
+            end
+            
+            ClaimEventBtn.Visible = false
+            ClaimEventBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+            ClaimEventBtn.Text = "⛔ HẾT HẠN"
+        end
+    end
+    
+    if not hasActiveEvent then
+        ClaimEventBtn.Visible = false
+        if #EventData > 0 then
+            EventNameLabel.Text = "📌 " .. string.upper(EventData[1].name)
+            EventTimeLabel.Text = "⏰ Thời gian: " .. EventData[1].time
+            EventTimeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+            EventRewardLabel.Text = "🎁 Phần thưởng: " .. EventData[1].reward
+        end
+    end
+end
+
+local function claimEvent()
+    if #EventData == 0 then
+        showNoCoinsAlert("❌ Không có sự kiện nào đang diễn ra!")
+        return
+    end
+    
+    for _, event in ipairs(EventData) do
+        if isEventTimeValid(event.time) then
+            local today = getToday()
+            local claimKey = event.name .. "_" .. today
+            if lastEventClaim[claimKey] then
+                showNoCoinsAlert("❌ Bạn đã nhận thưởng sự kiện này hôm nay rồi!")
+                return
+            end
+            
+            local baseReward = 0
+            if string.match(event.reward, "x(%d+)") then
+                baseReward = tonumber(string.match(event.reward, "x(%d+)")) or 1
+                baseReward = baseReward * 100
+            else
+                baseReward = 100
+            end
+            
+            if event.name:lower() == "hieuung" then
+                baseReward = baseReward * 2
+            end
+            
+            local finalReward = baseReward * settings.Multiplier
+            
+            settings.Coins = settings.Coins + finalReward
+            updateCoinsUI()
+            saveVIPData()
+            
+            lastEventClaim[claimKey] = true
+            showNoCoinsAlert("✅ Nhận thưởng thành công!\n+" .. formatCoins(finalReward) .. " Coins")
+            ClaimEventBtn.Visible = false
+            updateEventUI()
+            break
+        end
+    end
+end
+
+ClaimEventBtn.MouseButton1Click:Connect(claimEvent)
 
 task.spawn(function()
     while true do
         task.wait(1)
         updateBuyKeyUI()
-        updateVipTimerUI()
+        if Tabs["Script VIP"].Frame.Visible then
+            updateEventUI()
+        end
     end
 end)
 
--- TAB 6: COINS ADS
+loadEvents()
+
+task.spawn(function()
+    while true do
+        task.wait(30)
+        loadEvents()
+    end
+end)
+
+-- ========== Hàm tạo nút đóng ==========
+local function createCloseX(parent, callback)
+    local closeX = Instance.new("TextButton", parent)
+    closeX.Size = UDim2.new(0, 25, 0, 25)
+    closeX.Position = UDim2.new(1, -30, 0, 5)
+    closeX.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    closeX.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeX.Text = "X"
+    closeX.Font = Enum.Font.GothamBold
+    closeX.TextSize = 12
+    Instance.new("UICorner", closeX).CornerRadius = UDim.new(1, 0)
+    closeX.MouseButton1Click:Connect(callback)
+end
+
+-- ========== TAB 6: COINS ADS ==========
 local CoinsScroll = Tabs["Coins Ads"].Scroll
 
 local AdsBtn1 = Instance.new("TextButton", CoinsScroll)
@@ -1232,6 +1601,37 @@ FindCoinBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
+-- ========== Ô NHẬP CODE VÀ LỆNH ==========
+local CodeLabel = Instance.new("TextLabel", CoinsScroll)
+CodeLabel.Size = UDim2.new(0, 370, 0, 20)
+CodeLabel.Position = UDim2.new(0, 20, 0, 90)
+CodeLabel.BackgroundTransparency = 1
+CodeLabel.Text = "🎁 NHẬP CODE / COMMAND"
+CodeLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+CodeLabel.Font = Enum.Font.GothamBold
+CodeLabel.TextSize = 12
+CodeLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local CodeInput = Instance.new("TextBox", CoinsScroll)
+CodeInput.Size = UDim2.new(0, 220, 0, 35)
+CodeInput.Position = UDim2.new(0, 20, 0, 115)
+CodeInput.PlaceholderText = "Nhập mã code hoặc lệnh admin..."
+CodeInput.Text = ""
+CodeInput.TextSize = 11
+CodeInput.Font = Enum.Font.Gotham
+CodeInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+Instance.new("UICorner", CodeInput).CornerRadius = UDim.new(0, 8)
+
+local CodeConfirmBtn = Instance.new("TextButton", CoinsScroll)
+CodeConfirmBtn.Size = UDim2.new(0, 130, 0, 35)
+CodeConfirmBtn.Position = UDim2.new(0, 260, 0, 115)
+CodeConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+CodeConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CodeConfirmBtn.Text = "Xác Nhận"
+CodeConfirmBtn.Font = Enum.Font.GothamBold
+CodeConfirmBtn.TextSize = 12
+Instance.new("UICorner", CodeConfirmBtn).CornerRadius = UDim.new(0, 8)
+
 -- Hàm kiểm tra thời gian code
 local function isCodeTimeValid(timeString)
     if not timeString or timeString == "" or timeString == "0" then return true end
@@ -1318,89 +1718,11 @@ local function isCodeTimeValid(timeString)
     return isHourValid and isDateValid
 end
 
-local function getTimeDisplayText(timeString)
-    if not timeString or timeString == "" or timeString == "0" then return "🟢 Bất kì lúc nào" end
-    if timeString == "true" or timeString == "false" then return "🟢 Bất kì lúc nào" end
-    
-    local parts = {}
-    for part in string.gmatch(timeString, "[^,]+") do
-        table.insert(parts, part)
-    end
-    
-    local displayTexts = {}
-    
-    for _, part in ipairs(parts) do
-        local hourMatch = string.match(part, "^(%d+)%.(%d+)-(%d+)%.(%d+)$")
-        if hourMatch then
-            local startH, startM, endH, endM = tonumber(hourMatch), tonumber(hourMatch), tonumber(hourMatch), tonumber(hourMatch)
-            table.insert(displayTexts, "⏰ " .. string.format("%02d.%02d", startH, startM) .. " - " .. string.format("%02d.%02d", endH, endM))
-        end
-        
-        local dateMatch = string.match(part, "^(%d+)/(%d+)$")
-        if dateMatch then
-            local day, month = tonumber(dateMatch), tonumber(dateMatch)
-            table.insert(displayTexts, "📅 " .. string.format("%02d/%02d", day, month))
-        end
-        
-        local dateFullMatch = string.match(part, "^(%d+)/(%d+)/(%d+)$")
-        if dateFullMatch then
-            local day, month, year = tonumber(dateFullMatch), tonumber(dateFullMatch), tonumber(dateFullMatch)
-            table.insert(displayTexts, "📅 " .. string.format("%02d/%02d/%d", day, month, year))
-        end
-        
-        local dateRangeMatch = string.match(part, "^(%d+)/(%d+)-(%d+)/(%d+)$")
-        if dateRangeMatch then
-            local startD, startM, endD, endM = tonumber(dateRangeMatch), tonumber(dateRangeMatch), tonumber(dateRangeMatch), tonumber(dateRangeMatch)
-            table.insert(displayTexts, "📅 " .. string.format("%02d/%02d", startD, startM) .. " - " .. string.format("%02d/%02d", endD, endM))
-        end
-        
-        local dateRangeFullMatch = string.match(part, "^(%d+)/(%d+)/(%d+)-(%d+)/(%d+)/(%d+)$")
-        if dateRangeFullMatch then
-            local startD, startM, startY, endD, endM, endY = tonumber(dateRangeFullMatch), tonumber(dateRangeFullMatch), tonumber(dateRangeFullMatch), tonumber(dateRangeFullMatch), tonumber(dateRangeFullMatch), tonumber(dateRangeFullMatch)
-            table.insert(displayTexts, "📅 " .. string.format("%02d/%02d/%d", startD, startM, startY) .. " - " .. string.format("%02d/%02d/%d", endD, endM, endY))
-        end
-    end
-    
-    if #displayTexts == 0 then return "🟢 Bất kì lúc nào" end
-    
-    return table.concat(displayTexts, " | ")
-end
-
--- Code Input
-local CodeLabel = Instance.new("TextLabel", CoinsScroll)
-CodeLabel.Size = UDim2.new(0, 370, 0, 20)
-CodeLabel.Position = UDim2.new(0, 20, 0, 90) 
-CodeLabel.BackgroundTransparency = 1
-CodeLabel.Text = "🎁 NHẬP CODE / COMMAND"
-CodeLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
-CodeLabel.Font = Enum.Font.GothamBold
-CodeLabel.TextSize = 12
-CodeLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local CodeInput = Instance.new("TextBox", CoinsScroll)
-CodeInput.Size = UDim2.new(0, 220, 0, 35)
-CodeInput.Position = UDim2.new(0, 20, 0, 115)
-CodeInput.PlaceholderText = "Nhập mã code hoặc lệnh admin..."
-CodeInput.Text = ""
-CodeInput.TextSize = 11
-CodeInput.Font = Enum.Font.Gotham
-CodeInput.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-Instance.new("UICorner", CodeInput).CornerRadius = UDim.new(0, 8)
-
-local CodeConfirmBtn = Instance.new("TextButton", CoinsScroll)
-CodeConfirmBtn.Size = UDim2.new(0, 130, 0, 35)
-CodeConfirmBtn.Position = UDim2.new(0, 260, 0, 115)
-CodeConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
-CodeConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CodeConfirmBtn.Text = "Xác Nhận"
-CodeConfirmBtn.Font = Enum.Font.GothamBold
-CodeConfirmBtn.TextSize = 12
-Instance.new("UICorner", CodeConfirmBtn).CornerRadius = UDim.new(0, 8)
-
 CodeConfirmBtn.MouseButton1Click:Connect(function()
     local text = CodeInput.Text
     if text == "" then return end
     
+    -- LỆNH ADMIN
     local cmdMatch, val, unit = string.match(text:lower(), "^/admin%s+(%d+)([sphdy])$")
     
     if cmdMatch then
@@ -1421,6 +1743,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
         return
     end
 
+    -- CODE THƯỜNG
     local found = false
     for _, cd in pairs(ServerCodes) do
         if cd.code == text then
@@ -1469,7 +1792,7 @@ CodeConfirmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- TAB 7: CODE NEW
+-- ========== TAB 7: CODE NEW ==========
 local CodeNewScroll = Tabs["Code New"].Scroll
 
 local LiveCodeLabel = Instance.new("TextLabel", CodeNewScroll)
@@ -1496,11 +1819,9 @@ task.spawn(function()
         pcall(function()
             local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/Code")
             
-            for _, child in ipairs(CodeListContainer:GetChildren()) do
+            for _, child in pairs(CodeListContainer:GetChildren()) do
                 if child:IsA("TextLabel") then child:Destroy() end
             end
-            
-            ServerCodes = {}
             
             for line in res:gmatch("[^\r\n]+") do
                 local split = string.split(line, ":")
@@ -1522,38 +1843,14 @@ task.spawn(function()
                         showInTab = true
                     end
                     
-                    table.insert(ServerCodes, {
-                        code = codeString,
-                        coins = coinsReward,
-                        maxUses = maxUses,
-                        timeValid = timeValid,
-                        showInTab = showInTab
-                    })
-                    
                     if showInTab then
-                        local isValid = isCodeTimeValid(timeValid)
-                        local timeText = getTimeDisplayText(timeValid)
-                        
                         local item = Instance.new("TextLabel", CodeListContainer)
-                        item.Size = UDim2.new(1, 0, 0, 35)
-                        item.BackgroundColor3 = isValid and Color3.fromRGB(230, 255, 230) or Color3.fromRGB(255, 230, 230)
-                        item.TextColor3 = isValid and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(200, 50, 50)
+                        item.Size = UDim2.new(1, 0, 0, 30)
+                        item.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+                        item.TextColor3 = Color3.fromRGB(0, 0, 0)
                         item.Font = Enum.Font.GothamBold
-                        item.TextSize = 11
-                        
-                        local statusIcon = isValid and "✅" or "⛔"
-                        local statusText = isValid and "Có thể nhập" or "Hết hạn"
-                        
-                        local timeDisplay = ""
-                        if #split >= 5 and split[4] ~= "0" then
-                            timeDisplay = " | " .. timeText
-                        end
-                        
-                        item.Text = " 🔑 " .. codeString .. 
-                                   " | 💰 +" .. coinsReward .. " 🪙" .. 
-                                   " | 📦 " .. maxUses .. " lượt" ..
-                                   timeDisplay ..
-                                   " | " .. statusIcon .. " " .. statusText
+                        item.TextSize = 12
+                        item.Text = " 🔑 " .. codeString .. " : " .. maxUses .. " lượt (+" .. coinsReward .. " 🪙)"
                         item.TextXAlignment = Enum.TextXAlignment.Left
                         Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
                     end
@@ -1564,15 +1861,13 @@ task.spawn(function()
     end
 end)
 
--- TAB 8: DAILY REWARD (30 NGÀY - KÉO NGANG)
+-- ========== TAB 8: DAILY REWARD (CÓ NÚT HIỂN THỊ) ==========
 local DailyScroll = Tabs["Daily Reward"].Scroll
 
--- Xóa nội dung cũ
 for _, child in pairs(DailyScroll:GetChildren()) do
     child:Destroy()
 end
 
--- Tiêu đề
 local DailyTitle = Instance.new("TextLabel", DailyScroll)
 DailyTitle.Size = UDim2.new(1, -20, 0, 40)
 DailyTitle.Position = UDim2.new(0, 10, 0, 10)
@@ -1582,7 +1877,6 @@ DailyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 DailyTitle.Font = Enum.Font.GothamBold
 DailyTitle.TextSize = 18
 
--- Frame hiển thị thông tin
 local InfoFrame = Instance.new("Frame", DailyScroll)
 InfoFrame.Size = UDim2.new(1, -20, 0, 150)
 InfoFrame.Position = UDim2.new(0, 10, 0, 55)
@@ -1590,7 +1884,6 @@ InfoFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 InfoFrame.BackgroundTransparency = 0.5
 Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 10)
 
--- Label ngày hiện tại
 local DayLabel = Instance.new("TextLabel", InfoFrame)
 DayLabel.Size = UDim2.new(1, 0, 0, 30)
 DayLabel.Position = UDim2.new(0, 0, 0, 5)
@@ -1600,7 +1893,6 @@ DayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 DayLabel.Font = Enum.Font.GothamBold
 DayLabel.TextSize = 17
 
--- Label phần thưởng
 local RewardLabel = Instance.new("TextLabel", InfoFrame)
 RewardLabel.Size = UDim2.new(1, 0, 0, 30)
 RewardLabel.Position = UDim2.new(0, 0, 0, 40)
@@ -1610,7 +1902,6 @@ RewardLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 RewardLabel.Font = Enum.Font.GothamBold
 RewardLabel.TextSize = 17
 
--- Label trạng thái
 local StatusLabel = Instance.new("TextLabel", InfoFrame)
 StatusLabel.Size = UDim2.new(1, 0, 0, 30)
 StatusLabel.Position = UDim2.new(0, 0, 0, 75)
@@ -1620,7 +1911,6 @@ StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.TextSize = 14
 
--- Label streak
 local StreakLabel = Instance.new("TextLabel", InfoFrame)
 StreakLabel.Size = UDim2.new(1, 0, 0, 25)
 StreakLabel.Position = UDim2.new(0, 0, 0, 108)
@@ -1630,7 +1920,6 @@ StreakLabel.TextColor3 = Color3.fromRGB(255, 150, 0)
 StreakLabel.Font = Enum.Font.GothamBold
 StreakLabel.TextSize = 13
 
--- Label thời gian reset
 local ResetLabel = Instance.new("TextLabel", InfoFrame)
 ResetLabel.Size = UDim2.new(1, 0, 0, 20)
 ResetLabel.Position = UDim2.new(0, 0, 0, 133)
@@ -1640,31 +1929,28 @@ ResetLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 ResetLabel.Font = Enum.Font.Gotham
 ResetLabel.TextSize = 11
 
--- Nút nhận quà
 local ClaimBtn = Instance.new("TextButton", DailyScroll)
-ClaimBtn.Size = UDim2.new(0, 200, 0, 45)
+ClaimBtn.Size = UDim2.new(0, 200, 0, 50)
 ClaimBtn.Position = UDim2.new(0.5, -100, 0, 220)
 ClaimBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
 ClaimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ClaimBtn.Text = "🎁 CLAIM REWARD"
 ClaimBtn.Font = Enum.Font.GothamBold
-ClaimBtn.TextSize = 16
+ClaimBtn.TextSize = 18
 Instance.new("UICorner", ClaimBtn).CornerRadius = UDim.new(0, 12)
 
--- Label Coins
 local CoinsDailyLabel = Instance.new("TextLabel", DailyScroll)
 CoinsDailyLabel.Size = UDim2.new(1, -20, 0, 25)
-CoinsDailyLabel.Position = UDim2.new(0, 10, 0, 280)
+CoinsDailyLabel.Position = UDim2.new(0, 10, 0, 285)
 CoinsDailyLabel.BackgroundTransparency = 1
 CoinsDailyLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
 CoinsDailyLabel.TextColor3 = Color3.fromRGB(220, 150, 0)
 CoinsDailyLabel.Font = Enum.Font.GothamBold
 CoinsDailyLabel.TextSize = 13
 
--- Frame danh sách 30 ngày (kéo ngang)
 local ListFrame = Instance.new("Frame", DailyScroll)
-ListFrame.Size = UDim2.new(1, -20, 0, 100)
-ListFrame.Position = UDim2.new(0, 10, 0, 320)
+ListFrame.Size = UDim2.new(1, -20, 0, 120)
+ListFrame.Position = UDim2.new(0, 10, 0, 325)
 ListFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 ListFrame.BackgroundTransparency = 0.5
 Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0, 10)
@@ -1678,7 +1964,6 @@ ListTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 ListTitle.Font = Enum.Font.GothamBold
 ListTitle.TextSize = 11
 
--- ScrollingFrame kéo ngang
 local HorizontalScroll = Instance.new("ScrollingFrame", ListFrame)
 HorizontalScroll.Size = UDim2.new(1, -10, 1, -30)
 HorizontalScroll.Position = UDim2.new(0, 5, 0, 25)
@@ -1687,30 +1972,26 @@ HorizontalScroll.ScrollBarThickness = 6
 HorizontalScroll.CanvasSize = UDim2.new(0, 800, 0, 0)
 HorizontalScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 215, 0)
 
--- Layout cho danh sách ngang
 local HorizontalList = Instance.new("UIListLayout", HorizontalScroll)
 HorizontalList.FillDirection = Enum.FillDirection.Horizontal
 HorizontalList.Padding = UDim.new(0, 5)
 HorizontalList.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Biến
-local Rewards = {}
-local rewardItems = {}
+local DailyRewards = {}
+local dailyRewardItems = {}
 local lastClaimDate = ""
 local currentStreak = 0
 local isClaiming = false
 
--- Hàm lấy ngày hiện tại
 local function getToday()
     local now = os.date("*t")
     return string.format("%d-%d-%d", now.day, now.month, now.year)
 end
 
--- Hàm tải phần thưởng từ link dayli
-local function loadRewards()
+local function loadDailyRewards()
     pcall(function()
         local res = game:HttpGet("https://raw.githubusercontent.com/vukk2k12-hub/vukk/refs/heads/main/dayli")
-        Rewards = {}
+        DailyRewards = {}
         
         for line in res:gmatch("[^\r\n]+") do
             local split = string.split(line, ":")
@@ -1718,7 +1999,7 @@ local function loadRewards()
                 local coins = tonumber(split[1]) or 0
                 local day = tonumber(split[2]) or 0
                 if day >= 1 and day <= 30 then
-                    table.insert(Rewards, {
+                    table.insert(DailyRewards, {
                         day = day,
                         coins = coins
                     })
@@ -1726,32 +2007,30 @@ local function loadRewards()
             end
         end
         
-        -- Nếu không có dữ liệu từ link, dùng mặc định
-        if #Rewards == 0 then
+        if #DailyRewards == 0 then
             for day = 1, 30 do
-                table.insert(Rewards, {day = day, coins = day * 250})
+                table.insert(DailyRewards, {day = day, coins = day * 250})
             end
         end
         
-        table.sort(Rewards, function(a, b) return a.day < b.day end)
-        updateRewardList()
-        updateUI()
+        table.sort(DailyRewards, function(a, b) return a.day < b.day end)
+        updateDailyRewardList()
+        updateDailyUI()
     end)
 end
 
--- Cập nhật danh sách 30 ngày
-local function updateRewardList()
-    for _, item in pairs(rewardItems) do
+local function updateDailyRewardList()
+    for _, item in pairs(dailyRewardItems) do
         if item and item.Parent then
             item:Destroy()
         end
     end
-    rewardItems = {}
+    dailyRewardItems = {}
     
-    local totalWidth = #Rewards * 70 + 10
+    local totalWidth = #DailyRewards * 70 + 10
     HorizontalScroll.CanvasSize = UDim2.new(0, totalWidth, 0, 0)
     
-    for _, reward in ipairs(Rewards) do
+    for _, reward in ipairs(DailyRewards) do
         local item = Instance.new("Frame", HorizontalScroll)
         item.Size = UDim2.new(0, 60, 1, -10)
         item.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -1798,16 +2077,14 @@ local function updateRewardList()
         iconLabel.Font = Enum.Font.Gotham
         iconLabel.TextSize = 12
         
-        table.insert(rewardItems, item)
+        table.insert(dailyRewardItems, item)
     end
 end
 
--- Cập nhật UI
-local function updateUI()
+local function updateDailyUI()
     local today = getToday()
     local nextDay = currentStreak + 1
     
-    -- Kiểm tra nếu đã qua 00:00 và chưa claim
     if lastClaimDate ~= today and lastClaimDate ~= "" then
         local yesterday = os.date("*t", os.time() - 86400)
         local yesterdayStr = string.format("%d-%d-%d", yesterday.day, yesterday.month, yesterday.year)
@@ -1816,9 +2093,8 @@ local function updateUI()
         end
     end
     
-    -- Tìm phần thưởng tiếp theo
     local nextReward = nil
-    for _, reward in ipairs(Rewards) do
+    for _, reward in ipairs(DailyRewards) do
         if reward.day == nextDay then
             nextReward = reward
             break
@@ -1861,8 +2137,7 @@ local function updateUI()
     CoinsDailyLabel.Text = "💸 Coins: " .. formatCoins(settings.Coins) .. " | X" .. settings.Multiplier
 end
 
--- Hàm nhận quà
-local function claimReward()
+local function claimDailyReward()
     if isClaiming then return end
     
     local today = getToday()
@@ -1881,12 +2156,12 @@ local function claimReward()
     local yesterdayStr = string.format("%d-%d-%d", yesterday.day, yesterday.month, yesterday.year)
     if lastClaimDate ~= "" and lastClaimDate ~= yesterdayStr then
         currentStreak = 0
-        updateRewardList()
+        updateDailyRewardList()
     end
     
     local nextDay = currentStreak + 1
     local nextReward = nil
-    for _, reward in ipairs(Rewards) do
+    for _, reward in ipairs(DailyRewards) do
         if reward.day == nextDay then
             nextReward = reward
             break
@@ -1924,27 +2199,27 @@ local function claimReward()
     
     task.wait(0.5)
     
-    updateRewardList()
-    updateUI()
+    updateDailyRewardList()
+    updateDailyUI()
     
     isClaiming = false
 end
 
-ClaimBtn.MouseButton1Click:Connect(claimReward)
+ClaimBtn.MouseButton1Click:Connect(claimDailyReward)
 
 task.spawn(function()
     while true do
         task.wait(1)
-        updateUI()
+        updateDailyUI()
     end
 end)
 
-loadRewards()
+loadDailyRewards()
 
 task.spawn(function()
     while true do
         task.wait(60)
-        loadRewards()
+        loadDailyRewards()
     end
 end)
 
@@ -1977,7 +2252,7 @@ task.spawn(function()
     end
 end)
 
--- TAB 9: AFK
+-- ========== TAB 9: AFK ==========
 local AFKScroll = Tabs["AFK"].Scroll
 
 local AFKTitle = Instance.new("TextLabel", AFKScroll)
@@ -2054,7 +2329,7 @@ task.spawn(function()
     end
 end)
 
--- TAB 10: TIỀN
+-- ========== TAB 10: TIỀN ==========
 local MoneyScroll = Tabs["Tiền"].Scroll
 
 local ShopTitle = Instance.new("TextLabel", MoneyScroll)
@@ -2178,7 +2453,7 @@ GuideLabel.Font = Enum.Font.Gotham
 GuideLabel.TextSize = 11
 GuideLabel.TextWrapped = true
 
--- TAB 11: ADMIN
+-- ========== TAB 11: ADMIN ==========
 local AdminScroll = Tabs["Admin"].Scroll
 
 local AdminTitle = Instance.new("TextLabel", AdminScroll)
